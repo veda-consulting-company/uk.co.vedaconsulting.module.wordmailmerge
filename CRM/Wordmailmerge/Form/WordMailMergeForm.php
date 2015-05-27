@@ -271,7 +271,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       $returnProperties = array();
       foreach ($tokens as $key => $content) {
         foreach ($content['children'] as $key => $tokenInfo) {
-          $tokenMerge [] = $tokenInfo;
+          $tokenMerge[] = $tokenInfo;
           $tokenName     = str_replace(array('{contact.','}'),"",$tokenInfo['id']);
           $allTokens['contact'][] = $tokenName;
           $returnProperties[$tokenName] = 1;
