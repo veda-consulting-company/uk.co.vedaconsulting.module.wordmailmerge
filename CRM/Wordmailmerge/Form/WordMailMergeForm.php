@@ -15,8 +15,11 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
     $tokens = CRM_Utils_Token::formatTokensForDisplay($token);
     $firstTokenmrg = array();
     $tokenMerge = array();
-    $firstTokenmrg = array_merge($tokens[0]['children'], $tokens[1]['children']);
-    $tokenMerge = array_merge($firstTokenmrg, $tokens[2]['children']);
+    foreach ($tokens as $key => $content) {
+      foreach ($content['children'] as $key => $tokenInfo) {
+        $tokenMerge [] = $tokenInfo;
+      }
+    }
     foreach ($tokenMerge as $tmKey => $tmValue) {
       $tokenMerge[$tmKey]['token_name'] =  str_replace(array('{contact.','}'),"",$tmValue['id']);
     }
@@ -263,20 +266,38 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       $template = $default['fullPath'];
       $token = CRM_Core_SelectValues::contactTokens();
       $tokens = CRM_Utils_Token::formatTokensForDisplay($token);
-      $firstTokenmrg = array();
       $tokenMerge = array();
-      $firstTokenmrg = array_merge($tokens[0]['children'], $tokens[1]['children']);
-      $tokenMerge = array_merge($firstTokenmrg, $tokens[2]['children']);
+      $allTokens  = array();
+      $returnProperties = array();
+      foreach ($tokens as $key => $content) {
+        foreach ($content['children'] as $key => $tokenInfo) {
+          $tokenMerge [] = $tokenInfo;
+          $tokenName     = str_replace(array('{contact.','}'),"",$tokenInfo['id']);
+          $allTokens['contact'][] = $tokenName;
+          $returnProperties[$tokenName] = 1;
+        }
+      }
       foreach ($tokenMerge as $tmKey => $tmValue) {
         $tokenMerge[$tmKey]['token_name'] =  str_replace(array('{contact.','}'),"",$tmValue['id']);
       }
       foreach ($values as $key => $value) {
         if($key < $noofContact){
           $selectedCID = $values[$key];
-          $contact = $this->getContact($selectedCID);
+          // get the details for all selected contacts ( to, cc and bcc contacts )
+          list($contactFormatted) = CRM_Utils_Token::getTokenDetails(array($selectedCID),
+            $returnProperties,
+            NULL, NULL, FALSE,
+            $allTokens 
+          );
+         // $contact = $this->getContact($selectedCID);
           foreach ($tokenMerge as $atKey => $atValue) {
-              $vars[$key][$atValue['token_name']] = CRM_Utils_Token::getContactTokenReplacement($atValue['token_name'], $contact);
-          }
+            // Replace hook tokens
+            if (array_key_exists("contact.".$atValue['token_name'], $contactFormatted[$selectedCID]) ) {
+              $vars[$key][$atValue['token_name']] = $contactFormatted[$selectedCID]['contact.'.$atValue['token_name']];
+            } else { // replace contact tokens
+              $vars[$key][$atValue['token_name']] = CRM_Utils_Token::getContactTokenReplacement($atValue['token_name'], $contactFormatted[$selectedCID]);
+            }
+          } 
           $TBS->LoadTemplate($template, OPENTBS_ALREADY_UTF8);
           $TBS->MergeBlock('CiviCRM',$vars);
         }
