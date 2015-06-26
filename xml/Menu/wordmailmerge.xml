@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <menu>
   <item>
-    <path>civicrm/wordmailmergepage</path>
+    <path>civicrm/process/wordmailmerge/qrcode</path>
     <page_callback>CRM_Wordmailmerge_Page_WordMailMergePage</page_callback>
     <title>WordMailMergePage</title>
     <access_arguments>access CiviCRM</access_arguments>
