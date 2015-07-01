@@ -8,7 +8,7 @@ require_once 'CRM/Core/Form.php';
  * @see http://wiki.civicrm.org/confluence/display/CRMDOC43/QuickForm+Reference
  */
 class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
-  
+  CONST  TOKEN_VAR_NAME = "CiviCRM";
   static protected $_searchFormValues;
   function preProcess() {
     $token = CRM_Core_SelectValues::contactTokens();
@@ -21,7 +21,17 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       }
     }
     foreach ($tokenMerge as $tmKey => $tmValue) {
-      $tokenMerge[$tmKey]['token_name'] =  str_replace(array('{contact.','}'),"",$tmValue['id']);
+      $tokenFullName =  str_replace(array('{','}'),"",$tmValue['id']);
+      $explodedTokenName =  explode('.', $tokenFullName);
+      $tokenMerge[$tmKey]['token_name'] =  ($explodedTokenName[0] != 'contact') ? $tokenFullName : $explodedTokenName[1];
+      if ($explodedTokenName[0] != 'civiqrcode'){
+        $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=w:tr]';
+      }
+      else {
+        $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=w:image;ope=changepic]';
+      }
+        
+      // $tokenMerge[$tmKey]['token_name'] =  str_replace(array('{contact.','}'),"",$tmValue['id']);
     }
     $this->assign('availableTokens', $tokenMerge);
     self::preProcessCommon($this);
@@ -277,8 +287,11 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
           $returnProperties[$tokenName] = 1;
         }
       }
+      
       foreach ($tokenMerge as $tmKey => $tmValue) {
-        $tokenMerge[$tmKey]['token_name'] =  str_replace(array('{contact.','}'),"",$tmValue['id']);
+        $tokenFullName =  str_replace(array('{','}'),"",$tmValue['id']);
+        $explodedTokenName =  explode('.', $tokenFullName);
+        $tokenMerge[$tmKey]['token_name'] =  ($explodedTokenName[0] != 'contact') ? $tokenFullName : $explodedTokenName[1];
       }
       foreach ($values as $key => $value) {
         if($key < $noofContact){
@@ -292,14 +305,20 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
          // $contact = $this->getContact($selectedCID);
           foreach ($tokenMerge as $atKey => $atValue) {
             // Replace hook tokens
-            if (array_key_exists("contact.".$atValue['token_name'], $contactFormatted[$selectedCID]) ) {
-              $vars[$key][$atValue['token_name']] = $contactFormatted[$selectedCID]['contact.'.$atValue['token_name']];
+            if (array_key_exists($atValue['token_name'], $contactFormatted[$selectedCID]) ) {
+              $vars[$key][$atValue['token_name']] = $contactFormatted[$selectedCID][$atValue['token_name']];
             } else { // replace contact tokens
               $vars[$key][$atValue['token_name']] = CRM_Utils_Token::getContactTokenReplacement($atValue['token_name'], $contactFormatted[$selectedCID]);
             }
+            
+            $explodedKeyName =  explode('.', $atValue['token_name']);
+            if (!empty($explodedKeyName[1]) && $explodedKeyName[0] != 'contact') {
+              $vars[$key][$explodedKeyName[0]][$explodedKeyName[1]] = $vars[$key][$atValue['token_name']];
+              unset($vars[$key][$atValue['token_name']]);
+            }
           } 
           $TBS->LoadTemplate($template, OPENTBS_ALREADY_UTF8);
-          $TBS->MergeBlock('CiviCRM',$vars);
+          $TBS->MergeBlock(self::TOKEN_VAR_NAME,$vars);
         }
       }
       $output_file_name = 'CiviCRMWordExport.docx';
