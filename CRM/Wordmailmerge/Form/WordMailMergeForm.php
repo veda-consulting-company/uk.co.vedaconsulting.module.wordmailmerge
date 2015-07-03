@@ -12,14 +12,14 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
   static protected $_searchFormValues;
   function preProcess() {
     $token = CRM_Core_SelectValues::contactTokens();
-    $tokens = CRM_Utils_Token::formatTokensForDisplay($token);
-    $firstTokenmrg = array();
     $tokenMerge = array();
-    foreach ($tokens as $key => $content) {
-      foreach ($content['children'] as $key => $tokenInfo) {
-        $tokenMerge [] = $tokenInfo;
-      }
+    foreach ($token as $key => $label) {
+        $tokenMerge [] = array(
+          'id' => $key,
+          'text' => $label,
+        );
     }
+
     foreach ($tokenMerge as $tmKey => $tmValue) {
       $tokenFullName =  str_replace(array('{','}'),"",$tmValue['id']);
       $explodedTokenName =  explode('.', $tokenFullName);
@@ -275,17 +275,17 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       $TBS->Plugin(TBS_INSTALL, OPENTBS_PLUGIN); // load the OpenTBS plugin
       $template = $default['fullPath'];
       $token = CRM_Core_SelectValues::contactTokens();
-      $tokens = CRM_Utils_Token::formatTokensForDisplay($token);
       $tokenMerge = array();
       $allTokens  = array();
       $returnProperties = array();
-      foreach ($tokens as $key => $content) {
-        foreach ($content['children'] as $key => $tokenInfo) {
-          $tokenMerge [] = $tokenInfo;
-          $tokenName     = str_replace(array('{contact.','}'),"",$tokenInfo['id']);
+      foreach ($token as $key => $label) {
+          $tokenMerge [] = array(
+            'id' => $key,
+            'text' => $label,
+          );
+          $tokenName     = str_replace(array('{contact.','}'),"",$key);
           $allTokens['contact'][] = $tokenName;
           $returnProperties[$tokenName] = 1;
-        }
       }
       
       foreach ($tokenMerge as $tmKey => $tmValue) {
