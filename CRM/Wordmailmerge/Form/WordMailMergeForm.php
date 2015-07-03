@@ -275,7 +275,6 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       $TBS->Plugin(TBS_INSTALL, OPENTBS_PLUGIN); // load the OpenTBS plugin
       $template = $default['fullPath'];
       $token = CRM_Core_SelectValues::contactTokens();
-      $tokens = CRM_Utils_Token::formatTokensForDisplay($token);
       $tokenMerge = array();
       $allTokens  = array();
       $returnProperties = array();
