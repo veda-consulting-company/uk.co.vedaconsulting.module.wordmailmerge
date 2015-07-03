@@ -236,3 +236,39 @@ function wordmailmerge_civicrm_post( $op, $objectName, $objectId, &$objectRef ){
     }
   }
 }
+
+function wordmailmerge_civicrm_tokens( &$tokens ) {
+  
+  $tokens['contact']['contact.qrcode'] =  ts("QR Code");
+}
+
+function wordmailmerge_civicrm_tokenValues(&$values, $cids, $job = null, $tokens = array(), $context = null) {
+  if ((array_key_exists('contact', $tokens))) {
+    $config = CRM_Core_Config::singleton();
+
+    $imageUploadDir = $config->imageUploadDir;
+    $extensionDir = dirname( __FILE__ ) . DIRECTORY_SEPARATOR;
+    $qrlibFile    = $extensionDir .'/lib/phpqrcode/phpqrcode.php';
+    foreach($cids as $id){
+      $filename = 'qrcode_'.$id.date('dmy').'.png';
+      $pngAbsoluteFilePath = $imageUploadDir.$filename;
+      $arguments = array(
+        'cid'=> $id,
+        'mid'=> CRM_Core_DAO::getFieldValue('CRM_Contact_DAO_Contact', $id, 'external_identifier', 'id'),
+        'reset'=> 1,
+        'cs' => CRM_Contact_BAO_Contact_Utils::generateChecksum($id),
+      );
+      $url  = CRM_Utils_System::url('civicrm/process/wordmailmerge/qrcode', $arguments, TRUE);
+      //delete if the filename exists
+      if (file_exists($pngAbsoluteFilePath)) { 
+        unlink($pngAbsoluteFilePath);
+      }
+      require_once $qrlibFile;
+      QRcode::png($url, $pngAbsoluteFilePath, 'L', 4, 2);
+      
+      // set img tag for testing.. needo to change, to get the Qrcode in Word File.
+      $values[$id]['contact.qrcode'] = realpath($pngAbsoluteFilePath);
+      
+    }//end foreach
+  }//end if
+}
