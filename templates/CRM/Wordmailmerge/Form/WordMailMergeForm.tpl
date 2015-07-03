@@ -35,7 +35,7 @@
       </tr>
       <tr id="row_2" class="crm-report-instanceList">
         <td>{$tokenValue.text}</td>
-        <td>[CiviCRM. {$tokenValue.token_name};block=w:tr]</td>
+        <td>{$tokenValue.var_name}</td>
       </tr>
     {/foreach}
     </tbody>
