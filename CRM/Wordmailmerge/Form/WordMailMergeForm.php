@@ -11,204 +11,95 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
   CONST  TOKEN_VAR_NAME = "CiviCRM";
   static protected $_searchFormValues;
   function preProcess() {
+    //get all preProcessCommon Values 
+    self::preProcessCommon($this);
     $token = CRM_Core_SelectValues::contactTokens();
+    
+    //Membership Tokens
+    $token = $token + CRM_Core_SelectValues::membershipTokens();
+
     $tokenMerge = array();
     foreach ($token as $key => $label) {
-        $tokenMerge [] = array(
-          'id' => $key,
-          'text' => $label,
-        );
+      $tokenMerge [] = array(
+        'id' => $key,
+        'text' => $label,
+      );
+      
     }
-
+    
+    //construct array to manage token name and label
     foreach ($tokenMerge as $tmKey => $tmValue) {
       $tokenFullName =  str_replace(array('{','}'),"",$tmValue['id']);
       $explodedTokenName =  explode('.', $tokenFullName);
       $tokenMerge[$tmKey]['token_name'] =  ($explodedTokenName[0] != 'contact') ? $tokenFullName : $explodedTokenName[1];
       if ($explodedTokenName[0] != 'civiqrcode'){
-        $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=w:tr]';
+        if ($explodedTokenName[0] == 'membership') {
+          $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=w:tr]';
+        }
+        else {
+          $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=w:tr]';
+        }
       }
       else {
         $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=w:image;ope=changepic]';
       }
-        
-      // $tokenMerge[$tmKey]['token_name'] =  str_replace(array('{contact.','}'),"",$tmValue['id']);
+      $this->_allTokens[$explodedTokenName[0]][] = $explodedTokenName[1];
+      $this->_returnProperties[$explodedTokenName[1]] = 1;
     }
-    $this->assign('availableTokens', $tokenMerge);
-    self::preProcessCommon($this);
-  }
+    
+    $this->_tokenMerge = $tokenMerge;
+    $this->assign('availableTokens', $this->_tokenMerge);
 
-  /**
-   * @param $form
-   * @param bool $useTable
-   */
-  static function preProcessCommon(&$form, $useTable = FALSE) {
+  }
+  
+  static function preProcessCommon(&$form) {
     $form->_contactIds = array();
     $form->_contactTypes = array();
-    // get the submitted values of the search form
-    // we'll need to get fv from either search or adv search in the future
-    $fragment = 'search';
-    if ($form->_action == CRM_Core_Action::ADVANCED) {
-      self::$_searchFormValues = $form->controller->exportValues('Advanced');
-      $fragment .= '/advanced';
-    }
-    elseif ($form->_action == CRM_Core_Action::PROFILE) {
-      self::$_searchFormValues = $form->controller->exportValues('Builder');
-      $fragment .= '/builder';
-    }
-    elseif ($form->_action == CRM_Core_Action::COPY) {
-      self::$_searchFormValues = $form->controller->exportValues('Custom');
-      $fragment .= '/custom';
+    $form->_searchFrom = 'contact';
+    $searchformName = $form->urlPath[1];
+    if ($searchformName == 'member') {
+      $form->_searchFrom = $searchformName;
+      $values = $form->controller->exportValues($form->get('searchFormName'));
+      $ids = array();
+      if ($values['radio_ts'] == 'ts_sel') {
+        foreach ($values as $name => $value) {
+          if (substr($name, 0, CRM_Core_Form::CB_PREFIX_LEN) == CRM_Core_Form::CB_PREFIX) {
+            $ids[] = substr($name, CRM_Core_Form::CB_PREFIX_LEN);
+          }
+        }
+      }
+      else {
+        $queryParams = $form->get('queryParams');
+        $sortOrder = null;
+        if ( $form->get( CRM_Utils_Sort::SORT_ORDER  ) ) {
+          $sortOrder = $form->get( CRM_Utils_Sort::SORT_ORDER );
+        }
+        $query = new CRM_Contact_BAO_Query($queryParams, NULL, NULL, FALSE, FALSE,
+          CRM_Contact_BAO_Query::MODE_MEMBER
+        );
+        $query->_distinctComponentClause = ' civicrm_membership.id';
+        $query->_groupByComponentClause = ' GROUP BY civicrm_membership.id ';
+        $result = $query->searchQuery(0, 0, $sortOrder);
+
+        while ($result->fetch()) {
+          $ids[] = $result->membership_id;
+        }
+      }
+      
+      if (!empty($ids)) {
+        $form->_componentClause = ' civicrm_membership.id IN ( ' . implode(',', $ids) . ' ) ';
+        $form->assign('totalSelectedMembers', count($ids));
+      }
+
+      $form->_memberIds = $form->_componentIds = $ids;
+      $form->_contactIds = &CRM_Core_DAO::getContactIDsFromComponent($ids,'civicrm_membership');
+      $form->assign('totalSelectedContacts', count($form->_contactIds));
     }
     else {
-      self::$_searchFormValues = $form->controller->exportValues('Basic');
-    }
-
-    //set the user context for redirection of task actions
-    $qfKey = CRM_Utils_Request::retrieve('qfKey', 'String', $form);
-    $urlParams = 'force=1';
-    if (CRM_Utils_Rule::qfKey($qfKey)) {
-      $urlParams .= "&qfKey=$qfKey";
-    }
-    $cacheKey = "civicrm search {$qfKey}";
-    $url = CRM_Utils_System::url('civicrm/contact/' . $fragment, $urlParams);
-    $session = CRM_Core_Session::singleton();
-    $session->replaceUserContext($url);
-    $form->_task = CRM_Utils_Array::value('task', self::$_searchFormValues);
-    $crmContactTaskTasks = CRM_Contact_Task::taskTitles();
-    $form->assign('taskName', CRM_Utils_Array::value($form->_task, $crmContactTaskTasks));
-    if ($useTable) {
-      $form->_componentTable = CRM_Core_DAO::createTempTableName('civicrm_task_action', TRUE, $qfKey);
-      $sql = " DROP TABLE IF EXISTS {$form->_componentTable}";
-      CRM_Core_DAO::executeQuery($sql);
-
-      $sql = "CREATE TABLE {$form->_componentTable} ( contact_id int primary key) ENGINE=MyISAM DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci";
-      CRM_Core_DAO::executeQuery($sql);
-    }
-
-    // all contacts or action = save a search
-    if ((CRM_Utils_Array::value('radio_ts', self::$_searchFormValues) == 'ts_all') ||
-      ($form->_task == CRM_Contact_Task::SAVE_SEARCH)
-    ) {
-      $sortByCharacter = $form->get('sortByCharacter');
-      $cacheKey = ($sortByCharacter && $sortByCharacter != 'all') ? "{$cacheKey}_alphabet" : $cacheKey;
-
-      // since we don't store all contacts in prevnextcache, when user selects "all" use query to retrieve contacts
-      // rather than prevnext cache table for most of the task actions except export where we rebuild query to fetch
-      // final result set
-      if ($useTable) {
-        $allCids = CRM_Core_BAO_PrevNextCache::getSelection($cacheKey, "getall");
-      }
-      else {
-        $allCids[$cacheKey] = $form->getContactIds();
-      }
-
-      $form->_contactIds = array();
-      if ($useTable) {
-        $count = 0;
-        $insertString = array();
-        foreach ($allCids[$cacheKey] as $cid => $ignore) {
-          $count++;
-          $insertString[] = " ( {$cid} ) ";
-          if ($count % 200 == 0) {
-            $string = implode(',', $insertString);
-            $sql = "REPLACE INTO {$form->_componentTable} ( contact_id ) VALUES $string";
-            CRM_Core_DAO::executeQuery($sql);
-            $insertString = array();
-          }
-        }
-        if (!empty($insertString)) {
-          $string = implode(',', $insertString);
-          $sql = "REPLACE INTO {$form->_componentTable} ( contact_id ) VALUES $string";
-          CRM_Core_DAO::executeQuery($sql);
-        }
-      }
-      else {
-        // filter duplicates here
-        // CRM-7058
-        // might be better to do this in the query, but that logic is a bit complex
-        // and it decides when to use distinct based on input criteria, which needs
-        // to be fixed and optimized.
-
-        foreach ($allCids[$cacheKey] as $cid => $ignore) {
-          $form->_contactIds[] = $cid;
-        }
-      }
-    }
-    elseif (CRM_Utils_Array::value('radio_ts', self::$_searchFormValues) == 'ts_sel') {
-      // selected contacts only
-      // need to perform action on only selected contacts
-      $insertString = array();
-
-      // refire sql in case of custom seach
-      if ($form->_action == CRM_Core_Action::COPY) {
-        // selected contacts only
-        // need to perform action on only selected contacts
-        foreach (self::$_searchFormValues as $name => $value) {
-          if (substr($name, 0, CRM_Core_Form::CB_PREFIX_LEN) == CRM_Core_Form::CB_PREFIX) {
-            $contactID = substr($name, CRM_Core_Form::CB_PREFIX_LEN);
-            if ($useTable) {
-              $insertString[] = " ( {$contactID} ) ";
-            }
-            else {
-              $form->_contactIds[] = substr($name, CRM_Core_Form::CB_PREFIX_LEN);
-            }
-          }
-        }
-      }
-      else {
-        // fetching selected contact ids of passed cache key
-        $selectedCids = CRM_Core_BAO_PrevNextCache::getSelection($cacheKey);
-        foreach ($selectedCids[$cacheKey] as $selectedCid => $ignore) {
-          if ($useTable) {
-            $insertString[] = " ( {$selectedCid} ) ";
-          }
-          else {
-            $form->_contactIds[] = $selectedCid;
-          }
-        }
-      }
-
-      if (!empty($insertString)) {
-        $string = implode(',', $insertString);
-        $sql = "REPLACE INTO {$form->_componentTable} ( contact_id ) VALUES $string";
-        CRM_Core_DAO::executeQuery($sql);
-      }
-    }
-
-    //contact type for pick up profiles as per selected contact types with subtypes
-    //CRM-5521
-    if ($selectedTypes = CRM_Utils_Array::value('contact_type', self::$_searchFormValues)) {
-      if (!is_array($selectedTypes)) {
-        $selectedTypes = explode(' ', $selectedTypes);
-      }
-      foreach ($selectedTypes as $ct => $dontcare) {
-        if (strpos($ct, CRM_Core_DAO::VALUE_SEPARATOR) === FALSE) {
-          $form->_contactTypes[] = $ct;
-        }
-        else {
-          $separator = strpos($ct, CRM_Core_DAO::VALUE_SEPARATOR);
-          $form->_contactTypes[] = substr($ct, $separator + 1);
-        }
-      }
-    }
-
-    if (CRM_Utils_Array::value('radio_ts', self::$_searchFormValues) == 'ts_sel'
-      && ($form->_action != CRM_Core_Action::COPY)
-    ) {
-      $sel = CRM_Utils_Array::value('radio_ts', self::$_searchFormValues);
-      $form->assign('searchtype', $sel);
-      $result = CRM_Core_BAO_PrevNextCache::getSelectedContacts();
-      $form->assign("value", $result);
-    }
-
-    if (!empty($form->_contactIds)) {
-      $form->_componentClause = ' contact_a.id IN ( ' . implode(',', $form->_contactIds) . ' ) ';
-      $form->assign('totalSelectedContacts', count($form->_contactIds));
-
-      $form->_componentIds = $form->_contactIds;
+      parent::preProcessCommon($form);
     }
   }
-
+  
   function buildQuickForm() {
     $mysql = 'SELECT id FROM veda_civicrm_wordmailmerge'; 
     $tableCount = CRM_Core_DAO::executeQuery($mysql);
@@ -274,53 +165,48 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       $TBS = new clsTinyButStrong; // new instance of TBS
       $TBS->Plugin(TBS_INSTALL, OPENTBS_PLUGIN); // load the OpenTBS plugin
       $template = $default['fullPath'];
-      $token = CRM_Core_SelectValues::contactTokens();
-      $tokenMerge = array();
-      $allTokens  = array();
-      $returnProperties = array();
-      foreach ($token as $key => $label) {
-          $tokenMerge [] = array(
-            'id' => $key,
-            'text' => $label,
-          );
-          $tokenName     = str_replace(array('{contact.','}'),"",$key);
-          $allTokens['contact'][] = $tokenName;
-          $returnProperties[$tokenName] = 1;
-      }
-      
-      foreach ($tokenMerge as $tmKey => $tmValue) {
-        $tokenFullName =  str_replace(array('{','}'),"",$tmValue['id']);
-        $explodedTokenName =  explode('.', $tokenFullName);
-        $tokenMerge[$tmKey]['token_name'] =  ($explodedTokenName[0] != 'contact') ? $tokenFullName : $explodedTokenName[1];
-      }
+
       foreach ($values as $key => $value) {
         if($key < $noofContact){
           $selectedCID = $values[$key];
           // get the details for all selected contacts ( to, cc and bcc contacts )
           list($contactFormatted) = CRM_Utils_Token::getTokenDetails(array($selectedCID),
-            $returnProperties,
+            $this->_returnProperties,
             NULL, NULL, FALSE,
-            $allTokens 
+            $this->_allTokens 
           );
-         // $contact = $this->getContact($selectedCID);
-          foreach ($tokenMerge as $atKey => $atValue) {
+
+          $membershipFormatted = array();
+          if ($this->_searchFrom == 'member' && isset($contactFormatted[$selectedCID]['membership_id'])) {
+            $membershipFormatted = CRM_Utils_Token::getMembershipTokenDetails($contactFormatted[$selectedCID]['membership_id']);
+          }
+
+          foreach ($this->_tokenMerge as $atKey => $atValue) {
             // Replace hook tokens
+            $explodedTokenName = explode('.', $atValue['token_name']);
             if (array_key_exists($atValue['token_name'], $contactFormatted[$selectedCID]) ) {
-              $vars[$key][$atValue['token_name']] = $contactFormatted[$selectedCID][$atValue['token_name']];
-            } else { // replace contact tokens
-              $vars[$key][$atValue['token_name']] = CRM_Utils_Token::getContactTokenReplacement($atValue['token_name'], $contactFormatted[$selectedCID]);
+              if (!empty($explodedTokenName[1]) && $explodedTokenName[0] != 'contact') {
+                $vars[$key][$explodedTokenName[0]][$explodedTokenName[1]] = $contactFormatted[$selectedCID][$atValue['token_name']];
+              }
+              else{
+                $vars[$key][$atValue['token_name']] = $contactFormatted[$selectedCID][$atValue['token_name']];
+              }
             }
-            
-            $explodedKeyName =  explode('.', $atValue['token_name']);
-            if (!empty($explodedKeyName[1]) && $explodedKeyName[0] != 'contact') {
-              $vars[$key][$explodedKeyName[0]][$explodedKeyName[1]] = $vars[$key][$atValue['token_name']];
-              unset($vars[$key][$atValue['token_name']]);
-            }
+            else {
+              if ($explodedTokenName[0] == 'membership') {
+                $explodedTokenName[1] = ($explodedTokenName[1] == 'membership_id') ? 'id' : $explodedTokenName[1];
+                $vars[$key][$explodedTokenName[0]][$explodedTokenName[1]] = CRM_Utils_Token::getMembershipTokenReplacement($explodedTokenName[1], $membershipFormatted[$contactFormatted[$selectedCID]['membership_id']]);
+              }
+              else {
+                $vars[$key][$atValue['token_name']] = CRM_Utils_Token::getContactTokenReplacement($atValue['token_name'], $contactFormatted[$selectedCID]);
+              }
+            } 
           } 
           $TBS->LoadTemplate($template, OPENTBS_ALREADY_UTF8);
           $TBS->MergeBlock(self::TOKEN_VAR_NAME,$vars);
         }
       }
+
       $output_file_name = 'CiviCRMWordExport.docx';
       $TBS->Show(OPENTBS_DOWNLOAD, $output_file_name);
       CRM_Utils_System::civiExit();
