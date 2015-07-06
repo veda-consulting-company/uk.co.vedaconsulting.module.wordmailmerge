@@ -218,7 +218,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
             }
              
             //need to do proper fix, token_name.date seems not returning null value if not found
-            if ($explodedTokenName[0] == 'token_name') {
+            if ($explodedTokenName[0] == 'token_name' && !is_array($vars[$key]['token_name'])) {
               $vars[$key][$atValue['token_name']] = '';
             } 
           }
@@ -239,6 +239,11 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
               unset($vars[$key][$varKey]);
             }
           }
+          
+          if (!empty($vars[$key]['contact']['address_block'])) {
+            $vars[$key]['contact']['address_block'] = str_replace('<br />', "", $vars[$key]['contact']['address_block']);
+          }
+          
           $TBS->LoadTemplate($template, OPENTBS_ALREADY_UTF8);
           $TBS->MergeBlock(self::TOKEN_VAR_NAME,$vars);
         }
