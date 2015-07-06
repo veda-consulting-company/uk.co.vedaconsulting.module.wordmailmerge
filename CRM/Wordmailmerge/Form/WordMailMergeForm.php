@@ -57,8 +57,18 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
   static function preProcessCommon(&$form) {
     $form->_contactIds = array();
     $form->_contactTypes = array();
-    $form->_searchFrom = 'contact';
-    $searchformName = $form->urlPath[1];
+    $form->_searchFrom = $searchformName = 'contact';
+    
+    $searchFrom = $form->get('searchFormName');
+    $pages = $form->controller->_pages;
+    $prefix = 'contact';
+    if ($pages[$searchFrom]) {
+      $prefix = $pages[$searchFrom]->getVar('_prefix');
+      if ($prefix == 'member_') {
+        $searchformName = 'member';
+      }
+    }
+
     if ($searchformName == 'member') {
       $form->_searchFrom = $searchformName;
       $values = $form->controller->exportValues($form->get('searchFormName'));
