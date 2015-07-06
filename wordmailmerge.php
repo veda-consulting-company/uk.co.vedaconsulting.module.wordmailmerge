@@ -120,12 +120,25 @@ function wordmailmerge_civicrm_alterSettingsFolders(&$metaDataFolders = NULL) {
 require_once 'CRM/Contact/Task.php';
 
 function wordmailmerge_civicrm_searchTasks( $objectName, &$tasks ){
-  $addArray = array(
-          'title' => ts('Word Mail Merge'),
-          'class' => 'CRM_Wordmailmerge_Form_WordMailMergeForm',
-          'result' => TRUE,
-        );
-  array_push($tasks, $addArray);
+  if ($objectName != 'contact' && $objectName != 'membership') {
+    return;
+  }
+  
+  $taskExist = FALSE;
+  foreach ($tasks as $key => $value) {
+    if ($value['class'] == 'CRM_Wordmailmerge_Form_WordMailMergeForm') {
+      $taskExist = TRUE;
+    }
+  }
+
+  if (!$taskExist) {
+    $addArray = array(
+      'title' => ts('Word Mail Merge'),
+      'class' => 'CRM_Wordmailmerge_Form_WordMailMergeForm',
+      'result' => TRUE,
+    );
+    array_push($tasks, $addArray);
+  }
 }
 
 function wordmailmerge_civicrm_buildForm( $formName, &$form ){

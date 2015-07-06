@@ -16,7 +16,9 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
     $token = CRM_Core_SelectValues::contactTokens();
     
     //Membership Tokens
-    $token = $token + CRM_Core_SelectValues::membershipTokens();
+    if ($this->_searchFrom == 'member') {
+      $token = $token + CRM_Core_SelectValues::membershipTokens();
+    }
 
     $tokenMerge = array();
     foreach ($token as $key => $label) {
@@ -201,6 +203,15 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
                 $vars[$key][$atValue['token_name']] = CRM_Utils_Token::getContactTokenReplacement($atValue['token_name'], $contactFormatted[$selectedCID]);
               }
             } 
+          }
+          
+          //to skip error, if by chance using membership token in 'find contact' search
+          if ($this->_searchFrom != 'member') {
+            foreach (CRM_Core_SelectValues::membershipTokens() as $token => $label) {
+              $token = str_replace(array('{','}'),"",$token);
+              $tokenNames = explode('.', $token);
+              $vars[$key]['membership'][$tokenNames[1]] = $label;
+            }
           } 
           $TBS->LoadTemplate($template, OPENTBS_ALREADY_UTF8);
           $TBS->MergeBlock(self::TOKEN_VAR_NAME,$vars);
