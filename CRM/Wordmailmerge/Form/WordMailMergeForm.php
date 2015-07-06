@@ -28,17 +28,18 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       );
       
     }
-    
     //construct array to manage token name and label
     foreach ($tokenMerge as $tmKey => $tmValue) {
       $tokenFullName =  str_replace(array('{','}'),"",$tmValue['id']);
       $explodedTokenName =  explode('.', $tokenFullName);
       $tokenMerge[$tmKey]['token_name'] =  ($explodedTokenName[0] != 'contact') ? $tokenFullName : $explodedTokenName[1];
       if ($explodedTokenName[0] != 'civiqrcode'){
-        if ($explodedTokenName[0] == 'membership') {
+        if ($explodedTokenName[0] != 'contact') {
           $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=w:tr]';
         }
         else {
+          //need to do proper fix seems token named as contact.address_block
+          $explodedTokenName[1] = ($explodedTokenName[1] == 'address_block') ? 'contact.'.$explodedTokenName[1] : $explodedTokenName[1];
           $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=w:tr]';
         }
       }
@@ -48,7 +49,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       $this->_allTokens[$explodedTokenName[0]][] = $explodedTokenName[1];
       $this->_returnProperties[$explodedTokenName[1]] = 1;
     }
-    
+
     $this->_tokenMerge = $tokenMerge;
     $this->assign('availableTokens', $this->_tokenMerge);
 
@@ -196,6 +197,8 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
           foreach ($this->_tokenMerge as $atKey => $atValue) {
             // Replace hook tokens
             $explodedTokenName = explode('.', $atValue['token_name']);
+            //need to do proper fix seems token named as contact.address_block
+            $atValue['token_name'] = ($atValue['token_name'] == 'address_block') ? 'contact.'.$atValue['token_name'] : $atValue['token_name'];
             if (array_key_exists($atValue['token_name'], $contactFormatted[$selectedCID]) ) {
               if (!empty($explodedTokenName[1]) && $explodedTokenName[0] != 'contact') {
                 $vars[$key][$explodedTokenName[0]][$explodedTokenName[1]] = $contactFormatted[$selectedCID][$atValue['token_name']];
@@ -210,8 +213,13 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
                 $vars[$key][$explodedTokenName[0]][$explodedTokenName[1]] = CRM_Utils_Token::getMembershipTokenReplacement($explodedTokenName[1], $membershipFormatted[$contactFormatted[$selectedCID]['membership_id']]);
               }
               else {
-                $vars[$key][$atValue['token_name']] = CRM_Utils_Token::getContactTokenReplacement($atValue['token_name'], $contactFormatted[$selectedCID]);
+                $vars[$key][$atValue['token_name']] = CRM_Utils_Token::getContactTokenReplacement($atValue['token_name'], $contactFormatted[$selectedCID], FALSE, FALSE);
               }
+            }
+             
+            //need to do proper fix, token_name.date seems not returning null value if not found
+            if ($explodedTokenName[0] == 'token_name') {
+              $vars[$key][$atValue['token_name']] = '';
             } 
           }
           
@@ -222,7 +230,15 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
               $tokenNames = explode('.', $token);
               $vars[$key]['membership'][$tokenNames[1]] = $label;
             }
-          } 
+          }
+          
+          foreach ($vars[$key] as $varKey => $varValue) {
+            $explodeValues = explode('.', $varKey);
+            if (isset($explodeValues[1]) && !empty($explodeValues[1])) {
+              $vars[$key][$explodeValues[0]][$explodeValues[1]] = $vars[$key][$varKey];
+              unset($vars[$key][$varKey]);
+            }
+          }
           $TBS->LoadTemplate($template, OPENTBS_ALREADY_UTF8);
           $TBS->MergeBlock(self::TOKEN_VAR_NAME,$vars);
         }
