@@ -12,4 +12,10 @@
     <title>WordMailMergeForm</title>
     <access_arguments>access CiviCRM</access_arguments>
   </item>
+  <item>
+    <path>civicrm/wordmailmerge/search</path>
+    <page_callback>CRM_Wordmailmerge_Form_Search</page_callback>
+    <title>Search</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>  
 </menu>
