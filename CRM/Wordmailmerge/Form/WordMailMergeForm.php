@@ -36,15 +36,18 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       if ($explodedTokenName[0] != 'civiqrcode'){
         if ($explodedTokenName[0] != 'contact') {
           $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=w:tr]';
+          $tokenMerge[$tmKey]['var_name_table'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=w:tbl]';
         }
         else {
           //need to do proper fix seems token named as contact.address_block
           $explodedTokenName[1] = ($explodedTokenName[1] == 'address_block') ? 'contact.'.$explodedTokenName[1] : $explodedTokenName[1];
           $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=w:tr]';
+          $tokenMerge[$tmKey]['var_name_table'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=w:tbl]';
         }
       }
       else {
         $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=w:image;ope=changepic]';
+        $tokenMerge[$tmKey]['var_name_table'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=w:image;ope=changepic]';
       }
       $this->_allTokens[$explodedTokenName[0]][] = $explodedTokenName[1];
       $this->_returnProperties[$explodedTokenName[1]] = 1;
