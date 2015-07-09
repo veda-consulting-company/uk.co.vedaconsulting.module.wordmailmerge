@@ -31,11 +31,14 @@
     <tbody>
       <tr id="row_1" class="crm-report-instanceList">
         <td><strong>Available Tokens</strong></td>
+        <td><strong>If Table not used</strong></td>
+        <td><strong>If Table used </strong></td>
         {foreach from=$availableTokens key=tokenKey item=tokenValue}
       </tr>
       <tr id="row_2" class="crm-report-instanceList">
         <td>{$tokenValue.text}</td>
         <td>{$tokenValue.var_name}</td>
+        <td>{$tokenValue.var_name_table}</td>
       </tr>
     {/foreach}
     </tbody>
