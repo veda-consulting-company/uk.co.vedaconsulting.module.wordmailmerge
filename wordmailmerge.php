@@ -172,7 +172,7 @@ require_once 'CRM/Core/DAO.php';
           $default['url']           = CRM_Utils_System::url('civicrm/file', "reset=1&id={$dao->id}&eid={$msgTemplateId}");
           $default['href']          = "<a href=\"{$default['url']}\">{$default['cleanName']}</a>";
           $default['tag']           = CRM_Core_BAO_EntityTag::getTag($dao->id, 'civicrm_file');
-          $default['deleteURLArgs'] = CRM_Core_BAO_File::deleteURLArgs('civicrm_file', $msgTemplateId, $dao->id);
+          $default['deleteURLArgs'] = CRM_Core_BAO_File::deleteURLArgs('civicrm_msg_template', $msgTemplateId, $dao->id);
         }
         $defaults[$dao->id] = $default;
         $form->assign('defaults',$defaults);
@@ -226,6 +226,11 @@ function wordmailmerge_civicrm_post( $op, $objectName, $objectId, &$objectRef ){
         while ($dao->fetch()) {
           $msgId = $dao->id ; 
         }
+        
+        $sql = "INSERT INTO `civicrm_entity_file` ( entity_table, entity_id, file_id )
+                VALUES ( %1, %2, %3 )";
+        $params = array(1 => array('civicrm_msg_template', 'String'), 2 => array($objectId, 'Integer'), 3 => array($msgId, 'Integer'));
+        CRM_Core_DAO::executeQuery($sql, $params);
         $mysql = "INSERT INTO `veda_civicrm_wordmailmerge` ( msg_template_id, file_id )
                 VALUES ( %1, %2 )";
         $params = array(1 => array($objectId, 'Integer'), 2 => array($msgId, 'Integer'));
