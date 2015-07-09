@@ -48,9 +48,17 @@
   </div>
 </div>
 <div class="crm-content-block">
-{if $rowsEmpty}
+{if $rowsEmpty && $resetResult}
   <div class="crm-results-block crm-results-block-empty">
-    {include file="CRM/Contact/Form/Search/EmptyResults.tpl"}
+    <div class="messages status no-popup">
+      <div class="icon inform-icon"></div>&nbsp;
+        {ts}No matches found.{/ts}
+        {ts}Suggestions:{/ts}
+        <ul>
+        <li>{ts}check your spelling{/ts}</li>
+        <li>{ts}try a different spelling or use fewer letters{/ts}</li>
+        </ul>
+    </div>
   </div>
 {elseif $rows}
   <div class="crm-results-block">
@@ -81,8 +89,8 @@
             <td>{$row.membership_type}</td>
             <td>{$row.address}</td>
             <td>{$row.end_date}</td>
-            <td>{$row.contribution}</td>
-            <td style='width:125px;'>{$row.action|replace:'xx':$row.contact_id}</td>
+            <td>{$row.last_contribution}</td>
+            <!-- <td style='width:125px;'>{$row.action|replace:'xx':$row.contact_id}</td> -->
          </tr>
         {/foreach}
       </table>

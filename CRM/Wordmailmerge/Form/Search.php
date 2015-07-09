@@ -64,6 +64,15 @@ class CRM_Wordmailmerge_Form_Search extends CRM_Core_Form {
     $session = CRM_Core_Session::singleton();
     $searchContext = $session->get('searchContext');
     
+    $this->_reset = CRM_Utils_Request::retrieve('reset', 'Boolean',
+      CRM_Core_DAO::$_nullObject
+    );
+
+    $this->assign('resetResult', $this->_reset ? 0 : 1);
+    if ($session->get('searchContext') && $this->_reset) {
+      $session->resetScope('searchContext');
+    }
+   
     if ($this->_contactId) {
       unset($searchContext);
       $searchContext['contact_id'] = $this->_contactId;
@@ -75,10 +84,10 @@ class CRM_Wordmailmerge_Form_Search extends CRM_Core_Form {
         'address'           => ts('Address'),
         'end_date'          => ts('Expiry date'),      
         'contribution'      => ts('Last Two Contributions'),      
-        'action'            => ts('Action')
+        // 'action'            => ts('Action')
     );
     $this->assign('columnHeaders', $this->_columnHeaders);
-    // if (!CRM_Utils_Array::crmIsEmptyArray($searchContext)) {
+
     $rows = $this->getContent($searchContext);
     if ($rows) {
      $this->assign('rows', $rows); 
@@ -86,11 +95,7 @@ class CRM_Wordmailmerge_Form_Search extends CRM_Core_Form {
     else{
       $this->assign('rowsEmpty', TRUE);
     }
-    // }
-  
-    if ($session->get('searchContext')) {
-      $session->resetScope('searchContext');
-    }
+    
     $this->_contactId = CRM_Utils_Request::retrieve( 'cid', 'Positive', $this );
     parent::preProcess();
   }
@@ -184,19 +189,39 @@ class CRM_Wordmailmerge_Form_Search extends CRM_Core_Form {
     LEFT JOIN civicrm_address ca ON ( ca.contact_id = cc.id )
     LEFT JOIN {$cgRelatedMemberTableName} cvrm ON ( cvrm.entity_id = cc.id {$relatedAdult}) 
     WHERE (1) {$whereClause}
+    ORDER BY cc.display_name
     ";
 
     $dao = CRM_Core_DAO::executeQuery($query);
     $returnResult = array();
     while ($dao->fetch()) {
+      $lastContribute = array();
+      $contributeDAO = CRM_Core_DAO::executeQuery( "
+      SELECT cc.receive_date as receive_date, ft.name as type, cc.total_amount as total_amount
+      FROM civicrm_contribution cc
+      INNER JOIN civicrm_financial_type ft ON ( ft.id = cc.financial_type_id ) 
+      WHERE cc.contact_id IN ( {$dao->contact_id} )
+      ORDER BY receive_date DESC 
+      LIMIT 2
+      ");
+      while ($contributeDAO->fetch()) {
+        $lastContribute[] =  sprintf("%s - %s - %s",  
+          date('F jS Y', strtotime($contributeDAO->receive_date)), 
+          $contributeDAO->type, 
+          CRM_Utils_Money::format($contributeDAO->total_amount)
+          );
+      }
+      
       $returnResult[$dao->contact_id] = array(
         'name'              => $dao->name,
         'adult_name'        => $dao->other_adult_name,
         'membership_type'   => $dao->membership_type,
         'address'           => $dao->street_address,
         'end_date'          => $dao->end_date,
+        'last_contribution' => !empty($lastContribute) ? implode('<br />', $lastContribute) : NULL,
       );
     }
+
     return $returnResult;
   }
   
@@ -222,57 +247,6 @@ class CRM_Wordmailmerge_Form_Search extends CRM_Core_Form {
     );
     
     $session->set('searchContext' , $searchContext);
-  }
-
-  /**
-   * normalize the form values to make it look similar to the advanced form values
-   * this prevents a ton of work downstream and allows us to use the same code for
-   * multiple purposes (queries, save/edit etc)
-   *
-   * @return void
-   * @access private
-   */
-  function normalizeFormValues() {
-    $contactType = CRM_Utils_Array::value('contact_type', $this->_formValues);
-    if ($contactType && !is_array($contactType)) {
-      unset($this->_formValues['contact_type']);
-      $this->_formValues['contact_type'][$contactType] = 1;
-    }
-
-    $config = CRM_Core_Config::singleton();
-
-    return;
-  }
-
-  /**
-   * Add a form rule for this form. If Go is pressed then we must select some checkboxes
-   * and an action
-   */
-  static function formRule($fields) {
-    // check actionName and if next, then do not repeat a search, since we are going to the next page
-    if (array_key_exists('_qf_Search_next', $fields)) {
-      if (empty($fields['task'])) {
-        return array('task' => 'Please select a valid action.');
-      }
-
-      if (CRM_Utils_Array::value('task', $fields) == CRM_Contact_Task::SAVE_SEARCH) {
-        // dont need to check for selection of contacts for saving search
-        return TRUE;
-      }
-
-      // if the all contact option is selected, ignore the contact checkbox validation
-      if ($fields['radio_ts'] == 'ts_all') {
-        return TRUE;
-      }
-
-      foreach ($fields as $name => $dontCare) {
-        if (substr($name, 0, CRM_Core_Form::CB_PREFIX_LEN) == CRM_Core_Form::CB_PREFIX) {
-          return TRUE;
-        }
-      }
-      return array('task' => 'Please select one or more checkboxes to perform the action on.');
-    }
-    return TRUE;
   }
 
   /**
