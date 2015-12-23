@@ -11,10 +11,10 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
   CONST  TOKEN_VAR_NAME = "CiviCRM";
   static protected $_searchFormValues;
   function preProcess() {
-    //get all preProcessCommon Values 
+    //get all preProcessCommon Values
     self::preProcessCommon($this);
     $token = CRM_Core_SelectValues::contactTokens();
-    
+
     //Membership Tokens
     if ($this->_searchFrom == 'member') {
       $token = $token + CRM_Core_SelectValues::membershipTokens();
@@ -26,7 +26,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
         'id' => $key,
         'text' => $label,
       );
-      
+
     }
     //construct array to manage token name and label
     foreach ($tokenMerge as $tmKey => $tmValue) {
@@ -57,12 +57,12 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
     $this->assign('availableTokens', $this->_tokenMerge);
 
   }
-  
-  static function preProcessCommon(&$form) {
+
+  static function preProcessCommon(&$form, $useTable = true) {
     $form->_contactIds = array();
     $form->_contactTypes = array();
     $form->_searchFrom = $searchformName = 'contact';
-    
+
     $searchFrom = $form->get('searchFormName');
     $pages = $form->controller->_pages;
     $prefix = 'contact';
@@ -101,7 +101,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
           $ids[] = $result->membership_id;
         }
       }
-      
+
       if (!empty($ids)) {
         $form->_componentClause = ' civicrm_membership.id IN ( ' . implode(',', $ids) . ' ) ';
         $form->assign('totalSelectedMembers', count($ids));
@@ -115,9 +115,9 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       parent::preProcessCommon($form);
     }
   }
-  
+
   function buildQuickForm() {
-    $mysql = 'SELECT id FROM veda_civicrm_wordmailmerge'; 
+    $mysql = 'SELECT id FROM veda_civicrm_wordmailmerge';
     $tableCount = CRM_Core_DAO::executeQuery($mysql);
     $noofRows = array();
     while ($tableCount->fetch()) {
@@ -127,8 +127,8 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
     if( $rowCount == 0){
       $this->add('select', 'message_template', ts('Message Template'), array('' => '- select -'), TRUE);
       CRM_Core_Session::setStatus(ts("No attachement in the template."));
-    }else{  
-      $sql = " SELECT cmt.id, cmt.msg_title FROM civicrm_msg_template cmt 
+    }else{
+      $sql = " SELECT cmt.id, cmt.msg_title FROM civicrm_msg_template cmt
                RIGHT JOIN veda_civicrm_wordmailmerge vcw ON ( vcw.msg_template_id = cmt.id)";
       $dao = CRM_Core_DAO::executeQuery($sql);
       while ($dao->fetch()) {
@@ -154,7 +154,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
     $config = CRM_Core_Config::singleton();
     $msg_id = $this->_submitValues['message_template'];
     if(!empty($msg_id)){
-      $mysql =  " SELECT * FROM veda_civicrm_wordmailmerge WHERE msg_template_id = %1"; 
+      $mysql =  " SELECT * FROM veda_civicrm_wordmailmerge WHERE msg_template_id = %1";
       $params = array(1 => array($msg_id, 'Integer'));
       $dao = CRM_Core_DAO::executeQuery($mysql, $params);
       //$dao = CRM_Core_DAO::executeQuery($mysql);
@@ -189,7 +189,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
           list($contactFormatted) = CRM_Utils_Token::getTokenDetails(array($selectedCID),
             $this->_returnProperties,
             NULL, NULL, FALSE,
-            $this->_allTokens 
+            $this->_allTokens
           );
 
           $membershipFormatted = array();
@@ -219,13 +219,13 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
                 $vars[$key][$atValue['token_name']] = CRM_Utils_Token::getContactTokenReplacement($atValue['token_name'], $contactFormatted[$selectedCID], FALSE, FALSE);
               }
             }
-             
+
             //need to do proper fix, token_name.date seems not returning null value if not found
             if ($explodedTokenName[0] == 'token_name' && !is_array($vars[$key]['token_name'])) {
               $vars[$key][$atValue['token_name']] = '';
-            } 
+            }
           }
-          
+
           //to skip error, if by chance using membership token in 'find contact' search
           if ($this->_searchFrom != 'member') {
             foreach (CRM_Core_SelectValues::membershipTokens() as $token => $label) {
@@ -234,7 +234,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
               $vars[$key]['membership'][$tokenNames[1]] = $label;
             }
           }
-          
+
           foreach ($vars[$key] as $varKey => $varValue) {
             $explodeValues = explode('.', $varKey);
             if (isset($explodeValues[1]) && !empty($explodeValues[1])) {
@@ -242,11 +242,11 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
               unset($vars[$key][$varKey]);
             }
           }
-          
+
           if (!empty($vars[$key]['contact']['address_block'])) {
             $vars[$key]['contact']['address_block'] = str_replace('<br />', "", $vars[$key]['contact']['address_block']);
           }
-          
+
           $TBS->LoadTemplate($template, OPENTBS_ALREADY_UTF8);
           $TBS->MergeBlock(self::TOKEN_VAR_NAME,$vars);
         }
@@ -258,7 +258,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
     }
     parent::postProcess();
   }
-  
+
   function getContact($selectedCID) {
     $result = civicrm_api3('Contact', 'getsingle', array(
                            'sequential' => 1,

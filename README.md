@@ -10,7 +10,7 @@ uk.co.vedaconsulting.module.wordmailmerge
 
 ##Setup
 
-1. Create your Template Word document using the necessary tokens. (Sample 'template.docx' & available 'token.docs' have been provided in the extension directory).
+1. Create your Template Word document using the necessary tokens. (Sample 'template.docx' & available 'token.odt' have been provided in the extension directory).
 2. Navigate to 'Mailings'->'Message Templates'.
 3. Click 'Add Message Template'.
 4. Give a name for your new template in 'Message Title' field in the New Message Template form.
