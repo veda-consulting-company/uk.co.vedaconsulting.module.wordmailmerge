@@ -151,7 +151,7 @@ require_once 'CRM/Core/DAO.php';
     $form->assign('action', $action);
     $templatePath = realpath(dirname(__FILE__)."/templates");
     $config = CRM_Core_Config::singleton();
-    if($action == 2){
+    if($action == CRM_Core_Action::UPDATE){
       $msgTemplateId = $form->getVar('_defaultValues')['id'];
       $sql = "SELECT * FROM veda_civicrm_wordmailmerge WHERE msg_template_id = %1";
       $params = array(1 => array($msgTemplateId, 'Integer'));
