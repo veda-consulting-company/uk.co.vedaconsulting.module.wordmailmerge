@@ -29,7 +29,7 @@ function wordmailmerge_civicrm_xmlMenu(&$files) {
  */
 function wordmailmerge_civicrm_install() {
   require_once "CRM/Core/DAO.php";
-    
+
     CRM_Core_DAO::executeQuery("
         CREATE TABLE IF NOT EXISTS `veda_civicrm_wordmailmerge` (
           `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -123,7 +123,7 @@ function wordmailmerge_civicrm_searchTasks( $objectName, &$tasks ){
   if ($objectName != 'contact' && $objectName != 'membership') {
     return;
   }
-  
+
   $taskExist = FALSE;
   foreach ($tasks as $key => $value) {
     if ($value['class'] == 'CRM_Wordmailmerge_Form_WordMailMergeForm') {
@@ -151,13 +151,13 @@ require_once 'CRM/Core/DAO.php';
     $form->assign('action', $action);
     $templatePath = realpath(dirname(__FILE__)."/templates");
     $config = CRM_Core_Config::singleton();
-    if( $_GET['action'] == 'update'  ){
-      $msgTemplateId = $_GET['id'];
+    if($action == CRM_Core_Action::UPDATE){
+      $msgTemplateId = $form->getVar('_defaultValues')['id'];
       $sql = "SELECT * FROM veda_civicrm_wordmailmerge WHERE msg_template_id = %1";
       $params = array(1 => array($msgTemplateId, 'Integer'));
       $dao = CRM_Core_DAO::executeQuery($sql, $params);
       while ($dao->fetch()) {
-        $fileId = $dao->file_id ; 
+        $fileId = $dao->file_id ;
       }
       if (!empty($fileId)){
         $mysql = "SELECT * FROM civicrm_file WHERE id = %1";
@@ -178,24 +178,6 @@ require_once 'CRM/Core/DAO.php';
         $form->assign('defaults',$defaults);
       }
     }
-    if( $_GET['action'] == 'delete '){
-      $msgTemplateId = $_GET['id'];
-      $sql = "SELECT * FROM veda_civicrm_wordmailmerge WHERE msg_template_id = %1";
-      $params = array(1 => array($msgTemplateId, 'Integer'));
-      $dao = CRM_Core_DAO::executeQuery($sql, $params);
-      while ($dao->fetch()) {
-        $fileId = $dao->id ; 
-      }
-      if(empty($fileId)){
-        CRM_Utils_System::redirect(CRM_Utils_System::url('civicrm/admin/messageTemplates', 'reset=1'));
-        CRM_Core_Session::setStatus(ts("No attach doc in your template."));
-      }else{
-        $sql = "DELETE * FROM veda_civicrm_wordmailmerge WHERE msg_template_id = %1";
-        $params = array(1 => array($fileId, 'Integer'));
-        CRM_Core_DAO::executeQuery($sql, $params);
-        CRM_Utils_System::redirect(CRM_Utils_System::url('civicrm/admin/messageTemplates', 'reset=1'));
-      }
-    }
     CRM_Core_BAO_File::buildAttachment( $form, 'civicrm_msg_template', '', 1 );
     $session = CRM_Core_Session::singleton();
     $session->pushUserContext(CRM_Utils_System::url('civicrm/admin/messageTemplates', 'reset=1'));
@@ -211,7 +193,7 @@ function wordmailmerge_civicrm_post( $op, $objectName, $objectId, &$objectRef ){
     $uploaddir = $config->customFileUploadDir;
     $value = $_FILES['attachFile_1'];
     $fileFormat = (explode(".",$value['name']));
-    if($fileFormat[1] == 'docx' || $fileFormat[1] == 'doc' && !empty($fileFormat[0])){
+    if(isset($fileFormat[1]) && ($fileFormat[1] == 'docx' || $fileFormat[1] == 'odt' && !empty($fileFormat[0]))){
       $newName = CRM_Utils_File::makeFileName($value['name']);
       $mime_type = $_FILES['attachFile_1']['type'];
       $uploadfile = $uploaddir.$newName;
@@ -224,9 +206,9 @@ function wordmailmerge_civicrm_post( $op, $objectName, $objectId, &$objectRef ){
         $params = array(1 => array($newName, 'String'));
         $dao = CRM_Core_DAO::executeQuery($query, $params);
         while ($dao->fetch()) {
-          $msgId = $dao->id ; 
+          $msgId = $dao->id ;
         }
-        
+
         $sql = "INSERT INTO `civicrm_entity_file` ( entity_table, entity_id, file_id )
                 VALUES ( %1, %2, %3 )";
         $params = array(1 => array('civicrm_msg_template', 'String'), 2 => array($objectId, 'Integer'), 3 => array($msgId, 'Integer'));
@@ -235,7 +217,7 @@ function wordmailmerge_civicrm_post( $op, $objectName, $objectId, &$objectRef ){
                 VALUES ( %1, %2 )";
         $params = array(1 => array($objectId, 'Integer'), 2 => array($msgId, 'Integer'));
         CRM_Core_DAO::executeQuery($mysql, $params);
-      } else {
+      }else {
         $mysql = "DELETE FROM `veda_civicrm_wordmailmerge` WHERE msg_template_id = %1";
         $params = array(1 => array($objectId, 'Integer'));
         CRM_Core_DAO::executeQuery($mysql, $params);
@@ -254,3 +236,4 @@ function wordmailmerge_civicrm_post( $op, $objectName, $objectId, &$objectRef ){
     }
   }
 }
+
