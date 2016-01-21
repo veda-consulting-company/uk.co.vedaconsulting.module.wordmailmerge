@@ -237,3 +237,29 @@ function wordmailmerge_civicrm_post( $op, $objectName, $objectId, &$objectRef ){
   }
 }
 
+// create address block token
+function wordmailmerge_civicrm_tokens(&$tokens){
+
+  $tokens['contact'] = array(
+    'contact.address_block' => 'Address Block',
+  );
+
+}
+
+// assign address fileds as a block in address_block token
+function wordmailmerge_civicrm_tokenValues(&$values, $cids, $job = null, $tokens = array(), $context = null){
+
+  if (!empty($tokens['contact'])) {
+    foreach($cids as $id){
+      $params   = array('contact_id' => $id, 'version' => 3,);
+      $contact  = civicrm_api( 'Contact' , 'get' , $params );
+
+      if(!$contact['is_error']) {
+        $values[$id]['address_block'] = nl2br(CRM_Utils_Address::format($contact['values'][$id]));
+        // remove blank lines
+        $values[$id]['address_block'] = str_replace('<br />', "", $values[$id]['address_block']);
+      }
+    }
+  }
+}
+
