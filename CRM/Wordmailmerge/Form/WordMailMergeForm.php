@@ -216,64 +216,64 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
           if (array_key_exists($selectedCID, $contactrows)) {
             $contactFormatted[$selectedCID] = $contactrows[$selectedCID];
 
-            $membershipFormatted = array();
-            if ($this->_searchFrom == 'member' && isset($contactFormatted[$selectedCID]['membership_id'])) {
-              $membershipFormatted = CRM_Utils_Token::getMembershipTokenDetails($contactFormatted[$selectedCID]['membership_id']);
-            }
+          $membershipFormatted = array();
+          if ($this->_searchFrom == 'member' && isset($contactFormatted[$selectedCID]['membership_id'])) {
+            $membershipFormatted = CRM_Utils_Token::getMembershipTokenDetails($contactFormatted[$selectedCID]['membership_id']);
+          }
 
-            foreach ($this->_tokenMerge as $atKey => $atValue) {
-              // Replace hook tokens
-              $explodedTokenName = explode('.', $atValue['token_name']);
-              // this is fixed by assigning 'address_block' token into 'contact' token array // gopi@vedaconsulting.co.uk
-              //need to do proper fix seems token named as contact.address_block
-              // $atValue['token_name'] = ($atValue['token_name'] == 'address_block') ? 'contact.'.$atValue['token_name'] : $atValue['token_name'];
-              if (array_key_exists($atValue['token_name'], $contactFormatted[$selectedCID]) ) {
-                if (!empty($explodedTokenName[1]) && $explodedTokenName[0] != 'contact') {
-                  $vars[$key][$explodedTokenName[0]][$explodedTokenName[1]] = $contactFormatted[$selectedCID][$atValue['token_name']];
-                }
-                else{
-                  $vars[$key][$atValue['token_name']] = $contactFormatted[$selectedCID][$atValue['token_name']];
-                }
+          foreach ($this->_tokenMerge as $atKey => $atValue) {
+            // Replace hook tokens
+            $explodedTokenName = explode('.', $atValue['token_name']);
+            // this is fixed by assigning 'address_block' token into 'contact' token array // gopi@vedaconsulting.co.uk
+            //need to do proper fix seems token named as contact.address_block
+            // $atValue['token_name'] = ($atValue['token_name'] == 'address_block') ? 'contact.'.$atValue['token_name'] : $atValue['token_name'];
+            if (array_key_exists($atValue['token_name'], $contactFormatted[$selectedCID]) ) {
+              if (!empty($explodedTokenName[1]) && $explodedTokenName[0] != 'contact') {
+                $vars[$key][$explodedTokenName[0]][$explodedTokenName[1]] = $contactFormatted[$selectedCID][$atValue['token_name']];
+              }
+              else{
+                $vars[$key][$atValue['token_name']] = $contactFormatted[$selectedCID][$atValue['token_name']];
+              }
+            }
+            else {
+              if ($explodedTokenName[0] == 'membership') {
+                $explodedTokenName[1] = ($explodedTokenName[1] == 'membership_id') ? 'id' : $explodedTokenName[1];
+                $vars[$key][$explodedTokenName[0]][$explodedTokenName[1]] = CRM_Utils_Token::getMembershipTokenReplacement($explodedTokenName[1], $membershipFormatted[$contactFormatted[$selectedCID]['membership_id']]);
               }
               else {
-                if ($explodedTokenName[0] == 'membership') {
-                  $explodedTokenName[1] = ($explodedTokenName[1] == 'membership_id') ? 'id' : $explodedTokenName[1];
-                  $vars[$key][$explodedTokenName[0]][$explodedTokenName[1]] = CRM_Utils_Token::getMembershipTokenReplacement($explodedTokenName[1], $membershipFormatted[$contactFormatted[$selectedCID]['membership_id']]);
-                }
-                else {
-                  $vars[$key][$atValue['token_name']] = CRM_Utils_Token::getContactTokenReplacement($atValue['token_name'], $contactFormatted[$selectedCID], FALSE, FALSE);
-                }
-              }
-
-              //need to do proper fix, token_name.date seems not returning null value if not found
-              if ($explodedTokenName[0] == 'token_name' && !is_array($vars[$key]['token_name'])) {
-                $vars[$key][$atValue['token_name']] = '';
+                $vars[$key][$atValue['token_name']] = CRM_Utils_Token::getContactTokenReplacement($atValue['token_name'], $contactFormatted[$selectedCID], FALSE, FALSE);
               }
             }
 
-            //to skip error, if by chance using membership token in 'find contact' search
-            if ($this->_searchFrom != 'member') {
-              foreach (CRM_Core_SelectValues::membershipTokens() as $token => $label) {
-                $token = str_replace(array('{','}'),"",$token);
-                $tokenNames = explode('.', $token);
-                $vars[$key]['membership'][$tokenNames[1]] = $label;
-              }
+            //need to do proper fix, token_name.date seems not returning null value if not found
+            if ($explodedTokenName[0] == 'token_name' && !is_array($vars[$key]['token_name'])) {
+              $vars[$key][$atValue['token_name']] = '';
             }
+          }
 
-            foreach ($vars[$key] as $varKey => $varValue) {
-              $explodeValues = explode('.', $varKey);
-              if (isset($explodeValues[1]) && !empty($explodeValues[1])) {
-                $vars[$key][$explodeValues[0]][$explodeValues[1]] = $vars[$key][$varKey];
-                unset($vars[$key][$varKey]);
-              }
+          //to skip error, if by chance using membership token in 'find contact' search
+          if ($this->_searchFrom != 'member') {
+            foreach (CRM_Core_SelectValues::membershipTokens() as $token => $label) {
+              $token = str_replace(array('{','}'),"",$token);
+              $tokenNames = explode('.', $token);
+              $vars[$key]['membership'][$tokenNames[1]] = $label;
             }
-            // blank lines removed while creating the address_block - gopi@vedaconsulting.co.uk
-            /*if (!empty($vars[$key]['contact']['address_block'])) {
-              $vars[$key]['contact']['address_block'] = str_replace('<br />', "", $vars[$key]['contact']['address_block']);
-            }*/
+          }
 
-            $TBS->LoadTemplate($template, OPENTBS_ALREADY_UTF8);
-            $TBS->MergeBlock(self::TOKEN_VAR_NAME,$vars);
+          foreach ($vars[$key] as $varKey => $varValue) {
+            $explodeValues = explode('.', $varKey);
+            if (isset($explodeValues[1]) && !empty($explodeValues[1])) {
+              $vars[$key][$explodeValues[0]][$explodeValues[1]] = $vars[$key][$varKey];
+              unset($vars[$key][$varKey]);
+            }
+          }
+          // blank lines removed while creating the address_block - gopi@vedaconsulting.co.uk
+          /*if (!empty($vars[$key]['contact']['address_block'])) {
+            $vars[$key]['contact']['address_block'] = str_replace('<br />', "", $vars[$key]['contact']['address_block']);
+          }*/
+
+          $TBS->LoadTemplate($template, OPENTBS_ALREADY_UTF8);
+          $TBS->MergeBlock(self::TOKEN_VAR_NAME,$vars);
           }
         }
       }
