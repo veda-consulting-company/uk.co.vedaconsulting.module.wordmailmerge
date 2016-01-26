@@ -1,6 +1,10 @@
 uk.co.vedaconsulting.module.wordmailmerge
 =========================================
 
+## Description
+
+Allows you to produce Word Mail Merged documents from CiviCRM.
+
 ## How to Install
 
 1. Download extension from https://github.com/veda-consulting/uk.co.vedaconsulting.module.wordmailmerge/releases/latest.
