@@ -136,6 +136,11 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       }
       // add form elements
       $this->add('select', 'message_template', ts('Message Template'), array('' => '- select -') + $msgTemplatesResult, TRUE);
+      // if mergeSameAddress method exists
+      if (method_exists('CRM_Core_BAO_Address', 'mergeSameAddress')) {
+        //add checkbox for merge contacts with same address
+        $this->add('checkbox', 'merge_letter_for_same_address', ts('Merge letter for same address'), NULL);
+      }
       $this->addButtons(array(
         array(
           'type' => 'submit',
@@ -182,15 +187,34 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       $TBS->Plugin(TBS_INSTALL, OPENTBS_PLUGIN); // load the OpenTBS plugin
       $template = $default['fullPath'];
 
+      // contactrows to check for duplicate address
+      $contactrows = array();
+      foreach ($values as $key => $value){
+        $SelectedcontactID = $values[$key];
+
+        // get the details for all selected contacts
+        list($contactDetails) = CRM_Utils_Token::getTokenDetails(array($SelectedcontactID),
+          $this->_returnProperties,
+          NULL, NULL, FALSE,
+          $this->_allTokens
+        );
+
+        // populate contactrows array to check dupliacte address
+        $contactrows[$SelectedcontactID] = $contactDetails[$SelectedcontactID];
+      }
+
+      // if merge_letter_for_same_address selected check for duplicate address
+      if (isset($this->_submitValues['merge_letter_for_same_address']) && $this->_submitValues['merge_letter_for_same_address']) {
+        CRM_Core_BAO_Address::mergeSameAddress($contactrows);
+      }
+
       foreach ($values as $key => $value) {
         if($key < $noofContact){
           $selectedCID = $values[$key];
-          // get the details for all selected contacts ( to, cc and bcc contacts )
-          list($contactFormatted) = CRM_Utils_Token::getTokenDetails(array($selectedCID),
-            $this->_returnProperties,
-            NULL, NULL, FALSE,
-            $this->_allTokens
-          );
+          $contactFormatted = array();
+          // if contact_id found in filtered contactrows array get contact details from contactrows
+          if (array_key_exists($selectedCID, $contactrows)) {
+            $contactFormatted[$selectedCID] = $contactrows[$selectedCID];
 
           $membershipFormatted = array();
           if ($this->_searchFrom == 'member' && isset($contactFormatted[$selectedCID]['membership_id'])) {
@@ -200,8 +224,9 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
           foreach ($this->_tokenMerge as $atKey => $atValue) {
             // Replace hook tokens
             $explodedTokenName = explode('.', $atValue['token_name']);
+            // this is fixed by assigning 'address_block' token into 'contact' token array // gopi@vedaconsulting.co.uk
             //need to do proper fix seems token named as contact.address_block
-            $atValue['token_name'] = ($atValue['token_name'] == 'address_block') ? 'contact.'.$atValue['token_name'] : $atValue['token_name'];
+            // $atValue['token_name'] = ($atValue['token_name'] == 'address_block') ? 'contact.'.$atValue['token_name'] : $atValue['token_name'];
             if (array_key_exists($atValue['token_name'], $contactFormatted[$selectedCID]) ) {
               if (!empty($explodedTokenName[1]) && $explodedTokenName[0] != 'contact') {
                 $vars[$key][$explodedTokenName[0]][$explodedTokenName[1]] = $contactFormatted[$selectedCID][$atValue['token_name']];
@@ -242,13 +267,14 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
               unset($vars[$key][$varKey]);
             }
           }
-
-          if (!empty($vars[$key]['contact']['address_block'])) {
+          // blank lines removed while creating the address_block - gopi@vedaconsulting.co.uk
+          /*if (!empty($vars[$key]['contact']['address_block'])) {
             $vars[$key]['contact']['address_block'] = str_replace('<br />', "", $vars[$key]['contact']['address_block']);
-          }
+          }*/
 
           $TBS->LoadTemplate($template, OPENTBS_ALREADY_UTF8);
           $TBS->MergeBlock(self::TOKEN_VAR_NAME,$vars);
+          }
         }
       }
 
