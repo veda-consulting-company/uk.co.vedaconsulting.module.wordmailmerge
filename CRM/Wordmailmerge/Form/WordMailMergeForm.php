@@ -281,6 +281,8 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
 
       $output_file_name = 'CiviCRMWordExport.docx';
       $TBS->Show(OPENTBS_DOWNLOAD, $output_file_name);
+      // GK - record wordmailmerge as activity
+      $recordActivity = CRM_Wordmailmerge_Utils::recordActivity($values);
       CRM_Utils_System::civiExit();
     }
     parent::postProcess();
