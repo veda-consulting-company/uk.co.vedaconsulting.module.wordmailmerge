@@ -142,17 +142,34 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
         //add checkbox for merge contacts with same address
         $this->add('checkbox', 'merge_letter_for_same_address', ts('Merge letter for same address'), NULL);
       }
+
       $this->addButtons(array(
         array(
+          'type' => 'back',
+          'name' => ts('Back'),
+          'class' => 'wm-back',
+          'spacing' => '&nbsp;&nbsp;&nbsp;',
+          'isDefault' => TRUE,
+        ),
+        array(
           'type' => 'submit',
-          'name' => ts('Merge'),
+          'name' => ts('Print Letters'),
+          'class' => 'wm-print-letters',
+          'spacing' => '&nbsp;&nbsp;&nbsp;',
+          'isDefault' => TRUE,
+        ),
+        array(
+          'type' => 'cancel',
+          'name' => ts('Done'),
+          'class' => 'wm-done',
+          'spacing' => '&nbsp;&nbsp;&nbsp;',
           'isDefault' => TRUE,
         ),
       ));
     }
     // export form elements
     $this->assign('elementNames', $this->getRenderableElementNames());
-    parent::buildQuickForm();
+
   }
 
   function postProcess() {
