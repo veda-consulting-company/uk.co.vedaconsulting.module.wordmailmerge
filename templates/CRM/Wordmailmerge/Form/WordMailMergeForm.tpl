@@ -9,7 +9,12 @@
 {foreach from=$elementNames item=elementName}
   <div class="crm-section">
     <div class="label">{$form.$elementName.label}</div>
-    <div class="content">{$form.$elementName.html}</div>
+    <div class="content">
+      {$form.$elementName.html}
+      {if $elementName eq 'merge_letter_for_same_address'}
+        <span>{help id="id-merge-letter-help"}</span>
+      {/if}
+    </div>
     <div class="clear"></div>
   </div>
 {/foreach}
@@ -25,7 +30,8 @@
 <div class="crm-submit-buttons">
 {include file="CRM/common/formButtons.tpl" location="bottom"}
 </div>
-
+<br><br>
+<h3>Wordmail Merge Tokens</h3>
 <div id="Event" class="boxBlock">
   <table class="report-layout">
     <tbody>
@@ -44,10 +50,23 @@
     </tbody>
   </table>
 </div>
-    
+
  {*<script type="text/javascript">
   cj( document ).ready(function() {
     var temp = cj('.crm-msg-template-form-block-attachment').find('.crm-accordion-header').text('Attachment(WordMailMerge)');
     alert(temp);
   });
  </script>*}
+
+{literal}
+  <script type="text/javascript">
+    // hide 'Done' button by default
+    cj( ".wm-done" ).hide();
+    // Display 'Done' button, if print letter is clicked
+    cj( ".wm-print-letters" ).click(function() {
+      setTimeout(function(){
+        cj( ".wm-done" ).show();
+      }, 2000);
+    });
+  </script>
+{/literal}

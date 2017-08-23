@@ -30,10 +30,15 @@ Allows you to produce Word Mail Merged documents from CiviCRM.
 8. Click 'Save'.
 
 ## Usage
-1. Find contacts by using 'Search'->'Find Contacts' or 'Search'->'Advanced Search'.
-2. In the list of contacts, select the contacts that you want to send the letters.
+1. Letters can be produced from the following search results
+   - 'Search'->'Find Contacts' or 'Search'->'Advanced Search'.
+   - 'Memberships' -> 'Find memberships' (** Use this search to print letters with membership related tokens **)
+2. Select the records that you want to send the letters from one of the above search results.
 3. Select 'Word Mail Merge' in the Actions drop down.
 4. All the available tokens will be listed in the Word Mail Merge screen to double check the usage of tokens in the docx.
 4. If you are happy with all your tokens, select the Message Template that you created from the Message Template drop down.
 5. Click 'Confirm Action'.
 6. Choose your destination to save the exported Document.
+
+### Changelog
+Ver 2.1 : 'Wordmailmerge Letter' activity will be recorded against each contact.

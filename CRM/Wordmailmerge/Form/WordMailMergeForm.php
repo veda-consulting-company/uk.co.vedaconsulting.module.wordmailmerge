@@ -40,7 +40,8 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
         }
         else {
           //need to do proper fix seems token named as contact.address_block
-          $explodedTokenName[1] = ($explodedTokenName[1] == 'address_block') ? 'contact.'.$explodedTokenName[1] : $explodedTokenName[1];
+          //  'address_block' token assigned into 'contact' token array
+          // $explodedTokenName[1] = ($explodedTokenName[1] == 'address_block') ? 'contact.'.$explodedTokenName[1] : $explodedTokenName[1];
           $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=w:tr]';
           $tokenMerge[$tmKey]['var_name_table'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=w:tbl]';
         }
@@ -141,17 +142,34 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
         //add checkbox for merge contacts with same address
         $this->add('checkbox', 'merge_letter_for_same_address', ts('Merge letter for same address'), NULL);
       }
+
       $this->addButtons(array(
         array(
+          'type' => 'back',
+          'name' => ts('Back'),
+          'class' => 'wm-back',
+          'spacing' => '&nbsp;&nbsp;&nbsp;',
+          'isDefault' => TRUE,
+        ),
+        array(
           'type' => 'submit',
-          'name' => ts('Merge'),
+          'name' => ts('Print Letters'),
+          'class' => 'wm-print-letters',
+          'spacing' => '&nbsp;&nbsp;&nbsp;',
+          'isDefault' => TRUE,
+        ),
+        array(
+          'type' => 'cancel',
+          'name' => ts('Done'),
+          'class' => 'wm-done',
+          'spacing' => '&nbsp;&nbsp;&nbsp;',
           'isDefault' => TRUE,
         ),
       ));
     }
     // export form elements
     $this->assign('elementNames', $this->getRenderableElementNames());
-    parent::buildQuickForm();
+
   }
 
   function postProcess() {
@@ -280,6 +298,8 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
 
       $output_file_name = 'CiviCRMWordExport.docx';
       $TBS->Show(OPENTBS_DOWNLOAD, $output_file_name);
+      // GK - record wordmailmerge as activity
+      $recordActivity = CRM_Wordmailmerge_Utils::recordActivity($values);
       CRM_Utils_System::civiExit();
     }
     parent::postProcess();

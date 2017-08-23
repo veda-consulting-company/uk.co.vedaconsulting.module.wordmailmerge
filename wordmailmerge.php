@@ -38,6 +38,13 @@ function wordmailmerge_civicrm_install() {
           PRIMARY KEY (`id`)
         ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
     ");
+
+    // import auto_install.xml file
+    $extRoot = dirname( __FILE__ ) . DIRECTORY_SEPARATOR;
+    $extXMLFile = $extRoot . DIRECTORY_SEPARATOR . 'xml/auto_install.xml';
+    require_once 'CRM/Utils/Migrate/Import.php';
+    $import = new CRM_Utils_Migrate_Import( );
+    $import->run( $extXMLFile );
 }
 
 /**
