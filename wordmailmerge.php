@@ -167,7 +167,8 @@ function wordmailmerge_civicrm_buildForm( $formName, &$form ){
         $templatePath = realpath(dirname(__FILE__)."/templates");
         $config = CRM_Core_Config::singleton();
         if($action == CRM_Core_Action::UPDATE){
-          $msgTemplateId = $form->getVar('_defaultValues')['id'];
+          $defaultValues = $form->getVar('_defaultValues');
+          $msgTemplateId = $defaultValues['id'];
           $sql = "SELECT * FROM veda_civicrm_wordmailmerge WHERE msg_template_id = %1";
           $params = array(1 => array($msgTemplateId, 'Integer'));
           $dao = CRM_Core_DAO::executeQuery($sql, $params);
