@@ -308,6 +308,8 @@ function wordmailmerge_civicrm_tokens(&$tokens){
 function wordmailmerge_civicrm_tokenValues(&$values, $cids, $job = null, $tokens = array(), $context = null){
 
   if (!empty($tokens['contact'])) {
+    if (is_null($cids) ) { $cids = array(); }
+    
     foreach($cids as $id){
       $params   = array('contact_id' => $id, 'version' => 3,);
       $contact  = civicrm_api( 'Contact' , 'get' , $params );
