@@ -122,7 +122,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
     $tableCount = CRM_Core_DAO::executeQuery($mysql);
     $noofRows = array();
     while ($tableCount->fetch()) {
-      $noofRows = $tableCount->id;
+      $noofRows[] = $tableCount->id;
     }
     $rowCount = count((array)$noofRows);
     if( $rowCount == 0){
