@@ -12,7 +12,7 @@ Allows you to produce Word Mail Merged documents from CiviCRM.
 3. When you reload the Manage Extensions page the new “Word Mail Merge” extension should be listed with an install link.
 4. Proceed with install.
 
-##Setup
+## Setup
 
 1. Create your Template Word document using the necessary tokens. (Sample 'template.docx' & available 'token.odt' have been provided in the extension directory).
 2. Navigate to 'Mailings'->'Message Templates'.
@@ -23,7 +23,7 @@ Allows you to produce Word Mail Merged documents from CiviCRM.
 5. In 'Attachment( for WordMailMerge)' section, attach the template file created.
 6. Click 'Save'.
 
-### Version 4.7
+### Version 4.7 & Version 5.26
 5. Tick the 'Upload Document' checkbox in Source section.
 6. Attach your docx template in 'Upload Document' section.
 7. Make sure 'Wordmailmerge template' & 'Enabled?' checkboxes are ticked to use the Message Template as a Wordmailmerge template.
