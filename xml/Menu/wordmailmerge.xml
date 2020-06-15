@@ -17,5 +17,11 @@
     <page_callback>CRM_Wordmailmerge_Form_Search</page_callback>
     <title>Search</title>
     <access_arguments>access CiviCRM</access_arguments>
-  </item>  
+  </item>
+  <item>
+    <path>civicrm/libreofficemailmergeForm</path>
+    <page_callback>CRM_Wordmailmerge_Form_LibreOfficeMailMergeForm</page_callback>
+    <title>LibreOfficeMailMergeForm</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
 </menu>
