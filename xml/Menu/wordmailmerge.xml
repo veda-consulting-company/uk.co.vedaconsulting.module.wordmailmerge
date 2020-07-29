@@ -25,6 +25,12 @@
     <access_arguments>access CiviCRM</access_arguments>
   </item>
   <item>
+    <path>civicrm/LibreOfficeCalcMailMerge</path>
+    <page_callback>CRM_Wordmailmerge_Form_LibreOfficeCalcMailMerge</page_callback>
+    <title>LibreOfficeCalcMailMerge</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+  <item>
     <path>civicrm/MailMergeTemplate</path>
     <page_callback>CRM_Wordmailmerge_Form_MailMergeTemplate</page_callback>
     <title>MailMergeTemplate</title>
