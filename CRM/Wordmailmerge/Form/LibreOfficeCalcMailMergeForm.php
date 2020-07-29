@@ -5,15 +5,15 @@ require_once 'CRM/Core/Form.php';
 /**
  * Form controller class
  *
- * @see http://wiki.civicrm.org/confluence/display/CRMDOC43/QuickForm+Reference
+ * @see https://docs.civicrm.org/dev/en/latest/framework/quickform/
  */
-class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
+class CRM_Wordmailmerge_Form_LibreOfficeCalcMailMergeForm extends  CRM_Contribute_Form_Task {
   CONST  TOKEN_VAR_NAME = "CiviCRM";
   static protected $_searchFormValues;
   function preProcess() {
     //get all preProcessCommon Values
     self::preProcessCommon($this);
-    $token = CRM_Core_SelectValues::contactTokens();
+    $token = CRM_Core_SelectValues::contributionTokens();
 
     //Membership Tokens
     if ($this->_searchFrom == 'member') {
@@ -26,24 +26,21 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
         'id' => $key,
         'text' => $label,
       );
-
     }
     //construct array to manage token name and label
     foreach ($tokenMerge as $tmKey => $tmValue) {
-      $tokenFullName =  str_replace(array('{','}'),"",$tmValue['id']);
-      $explodedTokenName =  explode('.', $tokenFullName);
-      $tokenMerge[$tmKey]['token_name'] =  ($explodedTokenName[0] != 'contact') ? $tokenFullName : $explodedTokenName[1];
+      $tokenFullName =  str_replace(array('{','}'),"",$tmValue['id']); //romving the curly bracket -Asha
+      $explodedTokenName =  explode('.', $tokenFullName); // removing the contribution part - Asha
+
+      $tokenMerge[$tmKey]['token_name'] =  ($explodedTokenName[0] != 'contribution') ? $tokenFullName : $explodedTokenName[1];
       if ($explodedTokenName[0] != 'civiqrcode'){
-        if ($explodedTokenName[0] != 'contact') {
-          $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=w:tr]';
-          $tokenMerge[$tmKey]['var_name_table'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=w:tbl]';
+        if ($explodedTokenName[0] != 'contribution') {
+          $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=tbs:row]';
+          $tokenMerge[$tmKey]['var_name_table'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=tbs:table]';
         }
         else {
-          //need to do proper fix seems token named as contact.address_block
-          //  'address_block' token assigned into 'contact' token array
-          // $explodedTokenName[1] = ($explodedTokenName[1] == 'address_block') ? 'contact.'.$explodedTokenName[1] : $explodedTokenName[1];
-          $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=w:tr]';
-          $tokenMerge[$tmKey]['var_name_table'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=w:tbl]';
+          $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=tbs:row]';
+          $tokenMerge[$tmKey]['var_name_table'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=tbs:table]';
         }
       }
       else {
@@ -60,13 +57,14 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
   }
 
   static function preProcessCommon(&$form, $useTable = true) {
-    $form->_contactIds = array();
-    $form->_contactTypes = array();
-    $form->_searchFrom = $searchformName = 'contact';
+    $form->_contributionIds = array();
+    $form->_contributionTypes = array();
+    $form->_searchFrom = $searchformName = 'contribution';
 
     $searchFrom = $form->get('searchFormName');
+
     $pages = $form->controller->_pages;
-    $prefix = 'contact';
+    $prefix = 'contribution';
     if ($pages[$searchFrom]) {
       $prefix = $pages[$searchFrom]->getVar('_prefix');
       if ($prefix == 'member_') {
@@ -91,8 +89,8 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
         if ( $form->get( CRM_Utils_Sort::SORT_ORDER  ) ) {
           $sortOrder = $form->get( CRM_Utils_Sort::SORT_ORDER );
         }
-        $query = new CRM_Contact_BAO_Query($queryParams, NULL, NULL, FALSE, FALSE,
-          CRM_Contact_BAO_Query::MODE_MEMBER
+        $query = new  CRM_Contribute_BAO_Query($queryParams, NULL, NULL, FALSE, FALSE,
+          CRM_Contribute_BAO_Query::MODE_MEMBER
         );
         $query->_distinctComponentClause = ' civicrm_membership.id';
         $query->_groupByComponentClause = ' GROUP BY civicrm_membership.id ';
@@ -118,7 +116,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
   }
 
   function buildQuickForm() {
-    $mysql = 'SELECT id FROM veda_civicrm_wordmailmerge';
+    $mysql = 'SELECT id FROM veda_civicrm_excelmailmerge';
     $tableCount = CRM_Core_DAO::executeQuery($mysql);
     $noofRows = array();
     while ($tableCount->fetch()) {
@@ -129,19 +127,14 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       $this->add('select', 'message_template', ts('Message Template'), array('' => '- select -'), TRUE);
       CRM_Core_Session::setStatus(ts("No attachement in the template."));
     }else{
-      $sql = " SELECT cmt.id, cmt.msg_title FROM civicrm_msg_template cmt
-               RIGHT JOIN veda_civicrm_wordmailmerge vcw ON ( vcw.msg_template_id = cmt.id) WHERE mailmerge_option_id = 1";
+      $sql = "SELECT id, template_title FROM veda_civicrm_excelmailmerge where mailmerge_option_id = 1 and is_active = 1";
       $dao = CRM_Core_DAO::executeQuery($sql);
       while ($dao->fetch()) {
-        $msgTemplatesResult[$dao->id] = $dao->msg_title;
+        $templatesResult[$dao->id] = $dao->template_title;
       }
       // add form elements
-      $this->add('select', 'message_template', ts('Message Template'), array('' => '- select -') + $msgTemplatesResult, TRUE);
-      // if mergeSameAddress method exists
-      if (method_exists('CRM_Core_BAO_Address', 'mergeSameAddress')) {
-        //add checkbox for merge contacts with same address
-        $this->add('checkbox', 'merge_letter_for_same_address', ts('Merge letter for same address'), NULL);
-      }
+      $this->add('select', 'message_template', ts('Message Template'), array('' => '- select -') + $templatesResult, TRUE);
+      
 
       $this->addButtons(array(
         array(
@@ -173,11 +166,11 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
   }
 
   function postProcess() {
-    $values = $this->_contactIds;
+    $values = $this->_contributionIds;
     $config = CRM_Core_Config::singleton();
     $msg_id = $this->_submitValues['message_template'];
     if(!empty($msg_id)){
-      $mysql =  " SELECT * FROM veda_civicrm_wordmailmerge WHERE msg_template_id = %1";
+      $mysql =  " SELECT * FROM veda_civicrm_excelmailmerge WHERE id = %1";
       $params = array(1 => array($msg_id, 'Integer'));
       $dao = CRM_Core_DAO::executeQuery($mysql, $params);
       //$dao = CRM_Core_DAO::executeQuery($mysql);
@@ -196,70 +189,61 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
           $default['fullPath']      = $config->customFileUploadDir . DIRECTORY_SEPARATOR . $dao->uri;
           $default['deleteURLArgs'] = CRM_Core_BAO_File::deleteURLArgs('civicrm_file', $msg_id, $dao->id);
         }
+      
       $defaults[$dao->id] = $default;
       $this->assign('defaults', $defaults);
-      $noofContact = count($this->_contactIds);
+      $noofContribution = count($this->_contributionIds);
       require_once $config->extensionsDir.'/uk.co.vedaconsulting.module.wordmailmerge/tinybutstrong/tbs_class.php';
       require_once $config->extensionsDir.'/uk.co.vedaconsulting.module.wordmailmerge/tinybutstrong-opentbs/tbs_plugin_opentbs.php';
       $TBS = new clsTinyButStrong; // new instance of TBS
       $TBS->Plugin(TBS_INSTALL, OPENTBS_PLUGIN); // load the OpenTBS plugin
       $template = $default['fullPath'];
 
-      // contactrows to check for duplicate address
-      $contactrows = array();
+      // contributionrows to check for duplicate address
+      $contributionrows = array();
       foreach ($values as $key => $value){
-        $SelectedcontactID = $values[$key];
+        $SelectedContributionID = $values[$key];
 
-        // get the details for all selected contacts
-        list($contactDetails) = CRM_Utils_Token::getTokenDetails(array($SelectedcontactID),
-          $this->_returnProperties,
-          NULL, NULL, FALSE,
-          $this->_allTokens
-        );
+        // get the details for all selected contributions
+        $contributionDetails = civicrm_api3('Contribution', 'getsingle', ['id' => $SelectedContributionID]);
 
-        // populate contactrows array to check dupliacte address
-        $contactrows[$SelectedcontactID] = $contactDetails[$SelectedcontactID];
-      }
-
-      // if merge_letter_for_same_address selected check for duplicate address
-      if (isset($this->_submitValues['merge_letter_for_same_address']) && $this->_submitValues['merge_letter_for_same_address']) {
-        CRM_Core_BAO_Address::mergeSameAddress($contactrows);
+        // populate contributionrows array to check dupliacte address
+        $contributionrows[$SelectedContributionID] = $contributionDetails;
       }
 
       foreach ($values as $key => $value) {
-        if($key < $noofContact){
+        if($key < $noofContribution){
           $selectedCID = $values[$key];
-          $contactFormatted = array();
-          // if contact_id found in filtered contactrows array get contact details from contactrows
-          if (array_key_exists($selectedCID, $contactrows)) {
-            $contactFormatted[$selectedCID] = $contactrows[$selectedCID];
+          $contributionFormatted = array();
+          // if contact_id found in filtered contributionrows array get contribution details from contributionrows
+          if (array_key_exists($selectedCID, $contributionrows)) {
+            $contributionFormatted[$selectedCID] = $contributionrows[$selectedCID];
 
           $membershipFormatted = array();
-          if ($this->_searchFrom == 'member' && isset($contactFormatted[$selectedCID]['membership_id'])) {
-            $membershipFormatted = CRM_Utils_Token::getMembershipTokenDetails($contactFormatted[$selectedCID]['membership_id']);
+          if ($this->_searchFrom == 'member' && isset($contributionFormatted[$selectedCID]['membership_id'])) {
+            $membershipFormatted = CRM_Utils_Token::getMembershipTokenDetails($contributionFormatted[$selectedCID]['membership_id']);
           }
 
           foreach ($this->_tokenMerge as $atKey => $atValue) {
+
             // Replace hook tokens
             $explodedTokenName = explode('.', $atValue['token_name']);
-            // this is fixed by assigning 'address_block' token into 'contact' token array // gopi@vedaconsulting.co.uk
-            //need to do proper fix seems token named as contact.address_block
-            // $atValue['token_name'] = ($atValue['token_name'] == 'address_block') ? 'contact.'.$atValue['token_name'] : $atValue['token_name'];
-            if (array_key_exists($atValue['token_name'], $contactFormatted[$selectedCID]) ) {
+            
+            if (array_key_exists($atValue['token_name'], $contributionFormatted[$selectedCID]) ) {
               if (!empty($explodedTokenName[1]) && $explodedTokenName[0] != 'contact') {
-                $vars[$key][$explodedTokenName[0]][$explodedTokenName[1]] = $contactFormatted[$selectedCID][$atValue['token_name']];
+                $vars[$key][$explodedTokenName[0]][$explodedTokenName[1]] = $contributionFormatted[$selectedCID][$atValue['token_name']];
               }
               else{
-                $vars[$key][$atValue['token_name']] = $contactFormatted[$selectedCID][$atValue['token_name']];
+                $vars[$key][$atValue['token_name']] = $contributionFormatted[$selectedCID][$atValue['token_name']];
               }
             }
             else {
               if ($explodedTokenName[0] == 'membership') {
                 $explodedTokenName[1] = ($explodedTokenName[1] == 'membership_id') ? 'id' : $explodedTokenName[1];
-                $vars[$key][$explodedTokenName[0]][$explodedTokenName[1]] = CRM_Utils_Token::getMembershipTokenReplacement($explodedTokenName[1], $membershipFormatted[$contactFormatted[$selectedCID]['membership_id']]);
+                $vars[$key][$explodedTokenName[0]][$explodedTokenName[1]] = CRM_Utils_Token::getMembershipTokenReplacement($explodedTokenName[1], $membershipFormatted[$contributionFormatted[$selectedCID]['membership_id']]);
               }
               else {
-                $vars[$key][$atValue['token_name']] = CRM_Utils_Token::getContactTokenReplacement($atValue['token_name'], $contactFormatted[$selectedCID], FALSE, FALSE);
+                $vars[$key][$atValue['token_name']] = CRM_Utils_Token::getContactTokenReplacement($atValue['token_name'], $contributionFormatted[$selectedCID], FALSE, FALSE);
               }
             }
 
@@ -269,7 +253,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
             }
           }
 
-          //to skip error, if by chance using membership token in 'find contact' search
+          //to skip error, if by chance using membership token in 'find contribution' search
           if ($this->_searchFrom != 'member') {
             foreach (CRM_Core_SelectValues::membershipTokens() as $token => $label) {
               $token = str_replace(array('{','}'),"",$token);
@@ -285,10 +269,6 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
               unset($vars[$key][$varKey]);
             }
           }
-          // blank lines removed while creating the address_block - gopi@vedaconsulting.co.uk
-          /*if (!empty($vars[$key]['contact']['address_block'])) {
-            $vars[$key]['contact']['address_block'] = str_replace('<br />', "", $vars[$key]['contact']['address_block']);
-          }*/
 
           $TBS->LoadTemplate($template, OPENTBS_ALREADY_UTF8);
           $TBS->MergeBlock(self::TOKEN_VAR_NAME,$vars);
@@ -296,7 +276,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
         }
       }
 
-      $output_file_name = 'CiviCRMWordExport.docx';
+      $output_file_name = 'CiviCRMLOCalcExport.ods';
       $TBS->Show(OPENTBS_DOWNLOAD, $output_file_name);
       // GK - record wordmailmerge as activity
       $recordActivity = CRM_Wordmailmerge_Utils::recordActivity($values);

@@ -5,9 +5,9 @@ require_once 'CRM/Core/Form.php';
 /**
  * Form controller class
  *
- * @see http://wiki.civicrm.org/confluence/display/CRMDOC43/QuickForm+Reference
+ * @see https://docs.civicrm.org/dev/en/latest/framework/quickform/
  */
-class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
+class CRM_Wordmailmerge_Form_LibreOfficeMailMergeForm extends  CRM_Contact_Form_Task {
   CONST  TOKEN_VAR_NAME = "CiviCRM";
   static protected $_searchFormValues;
   function preProcess() {
@@ -32,18 +32,19 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
     foreach ($tokenMerge as $tmKey => $tmValue) {
       $tokenFullName =  str_replace(array('{','}'),"",$tmValue['id']);
       $explodedTokenName =  explode('.', $tokenFullName);
+
       $tokenMerge[$tmKey]['token_name'] =  ($explodedTokenName[0] != 'contact') ? $tokenFullName : $explodedTokenName[1];
       if ($explodedTokenName[0] != 'civiqrcode'){
         if ($explodedTokenName[0] != 'contact') {
-          $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=w:tr]';
-          $tokenMerge[$tmKey]['var_name_table'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=w:tbl]';
+          $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=tbs:row]';
+          $tokenMerge[$tmKey]['var_name_table'] =  '['.self::TOKEN_VAR_NAME.'.'.$tokenFullName.';block=tbs:table]';
         }
         else {
           //need to do proper fix seems token named as contact.address_block
           //  'address_block' token assigned into 'contact' token array
           // $explodedTokenName[1] = ($explodedTokenName[1] == 'address_block') ? 'contact.'.$explodedTokenName[1] : $explodedTokenName[1];
-          $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=w:tr]';
-          $tokenMerge[$tmKey]['var_name_table'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=w:tbl]';
+          $tokenMerge[$tmKey]['var_name'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=tbs:row]';
+          $tokenMerge[$tmKey]['var_name_table'] =  '['.self::TOKEN_VAR_NAME.'.'.$explodedTokenName[1].';block=tbs:table]';
         }
       }
       else {
@@ -130,7 +131,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       CRM_Core_Session::setStatus(ts("No attachement in the template."));
     }else{
       $sql = " SELECT cmt.id, cmt.msg_title FROM civicrm_msg_template cmt
-               RIGHT JOIN veda_civicrm_wordmailmerge vcw ON ( vcw.msg_template_id = cmt.id) WHERE mailmerge_option_id = 1";
+               RIGHT JOIN veda_civicrm_wordmailmerge vcw ON ( vcw.msg_template_id = cmt.id) WHERE mailmerge_option_id = 2";
       $dao = CRM_Core_DAO::executeQuery($sql);
       while ($dao->fetch()) {
         $msgTemplatesResult[$dao->id] = $dao->msg_title;
@@ -196,6 +197,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
           $default['fullPath']      = $config->customFileUploadDir . DIRECTORY_SEPARATOR . $dao->uri;
           $default['deleteURLArgs'] = CRM_Core_BAO_File::deleteURLArgs('civicrm_file', $msg_id, $dao->id);
         }
+      
       $defaults[$dao->id] = $default;
       $this->assign('defaults', $defaults);
       $noofContact = count($this->_contactIds);
@@ -296,7 +298,7 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
         }
       }
 
-      $output_file_name = 'CiviCRMWordExport.docx';
+      $output_file_name = 'CiviCRMLOWriterExport.odt';
       $TBS->Show(OPENTBS_DOWNLOAD, $output_file_name);
       // GK - record wordmailmerge as activity
       $recordActivity = CRM_Wordmailmerge_Utils::recordActivity($values);

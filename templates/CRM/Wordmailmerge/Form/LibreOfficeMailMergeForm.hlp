@@ -1,0 +1,7 @@
+{htxt id="id-merge-letter-help-title"}
+  {ts}Merge letter for same address{/ts}
+{/htxt}
+{htxt id="id-merge-letter-help"}
+<p>{ts}This option lets you create one letter by combining the same address but for two separate contacts.{/ts}</p>
+{/htxt}
+

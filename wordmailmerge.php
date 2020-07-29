@@ -35,6 +35,18 @@ function wordmailmerge_civicrm_install() {
           `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
           `msg_template_id` int(10) NOT NULL,
           `file_id` int(10) NOT NULL COMMENT 'FK to file_civicrm',
+          `mailmerge_option_id` int(10) NOT NULL,
+          PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
+    ");
+
+    CRM_Core_DAO::executeQuery("
+        CREATE TABLE IF NOT EXISTS `veda_civicrm_excelmailmerge` (
+          `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+          `template_title` VARCHAR(255) NOT NULL,
+          `is_active` tinyint(4) DEFAULT '1',
+          `file_id` int(10) NOT NULL COMMENT 'FK to file_civicrm',
+          `mailmerge_option_id` int(10) NOT NULL,
           PRIMARY KEY (`id`)
         ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
     ");
@@ -46,6 +58,23 @@ function wordmailmerge_civicrm_install() {
     $import = new CRM_Utils_Migrate_Import( );
     $import->run( $extXMLFile );
 }
+
+/**
+ * Implementation of hook_civicrm_managed
+ *
+ * Add entries to the navigation menu, automatically removed on uninstall
+ */
+function wordmailmerge_civicrm_navigationMenu(&$menu) {
+  $mailMergeTemplate = [
+    'name' => 'Mail Merge',
+    'url' => 'civicrm/MailMergeTemplate',
+    'permission' => 'administer CiviCRM',
+    'operator' => NULL,
+    'separator' => NULL,
+  ];
+  _wordmailmerge_civix_insert_navigation_menu($menu, 'Administer/CiviContribute', $mailMergeTemplate);
+}
+
 
 /**
  * Implementation of hook_civicrm_uninstall
@@ -127,25 +156,48 @@ function wordmailmerge_civicrm_alterSettingsFolders(&$metaDataFolders = NULL) {
 require_once 'CRM/Contact/Task.php';
 
 function wordmailmerge_civicrm_searchTasks( $objectName, &$tasks ){
-  if ($objectName != 'contact' && $objectName != 'membership') {
-    return;
-  }
-
-  $taskExist = FALSE;
-  foreach ($tasks as $key => $value) {
-    if ($value['class'] == 'CRM_Wordmailmerge_Form_WordMailMergeForm') {
-      $taskExist = TRUE;
+  if ($objectName == 'contact' || $objectName == 'membership') {
+    $taskExist = FALSE;
+    foreach ($tasks as $key => $value) {
+      if (($value['class'] == 'CRM_Wordmailmerge_Form_WordMailMergeForm') || ($value['class'] == 'CRM_Wordmailmerge_Form_LibreOfficeMailMergeForm')) {
+        $taskExist = TRUE;
+      }
     }
-  }
-
-  if (!$taskExist) {
-    $addArray = array(
-      'title' => ts('Word Mail Merge'),
-      'class' => 'CRM_Wordmailmerge_Form_WordMailMergeForm',
-      'result' => TRUE,
-    );
-    array_push($tasks, $addArray);
-  }
+  
+    if (!$taskExist) {
+      $addArray = array(
+        'title' => ts('Word Mail Merge '),
+        'class' => 'CRM_Wordmailmerge_Form_WordMailMergeForm',
+        'result' => TRUE,
+      );
+      $addArray2 = array(
+        'title' => ts('Libreoffice Mail Merge '),
+        'class' => 'CRM_Wordmailmerge_Form_LibreOfficeMailMergeForm',
+        'result' => TRUE,
+      );
+      array_push($tasks, $addArray, $addArray2);
+    }  
+  }elseif($objectName == 'contribution'){
+    $taskExist = FALSE;
+    foreach($tasks as $key => $value){
+      if(($value['class'] == 'CRM_Wordmailmerge_Form_LibreOfficeCalcMailMergeForm') || ($value['class'] == 'CRM_Wordmailmerge_Form_LibreOfficeMailMergeForm')){
+        $taskExist = TRUE;
+      }
+    }
+    if(!$taskExist){
+      $addArray = array (
+        'title' => ts('LibreOffice Calc Mail Merge'),
+        'class' => 'CRM_Wordmailmerge_Form_LibreOfficeCalcMailMergeForm',
+        'result' => TRUE
+      );
+      $addArray2 = array(
+        'title' => ts('Ms Excel Mail Merge '),
+        'class' => 'CRM_Wordmailmerge_Form_MsExcelMailMergeForm',
+        'result' => TRUE,
+      );
+      array_push($tasks, $addArray, $addArray2);
+    }
+  } 
 }
 
 function wordmailmerge_civicrm_buildForm( $formName, &$form ){
@@ -207,8 +259,15 @@ function wordmailmerge_civicrm_buildForm( $formName, &$form ){
       else {
 
         $templatePath = realpath(dirname(__FILE__)."/templates");
-        // Add a checkbox to mark this template as wordmailmerge template
-        $form->add('checkbox', 'is_wordmailmerge', ts('Wordmailmerge template'), NULL);
+     
+        $form->add('select', 'is_mail_merge', ts('Mail merge'),
+          array(
+            '0' => ts('- select -'),
+            '1' => ts('Word template'),
+            '2' => ts('LibreOffice Writer template')
+          ) 
+        );
+        
         // add required template block
         CRM_Core_Region::instance('page-body')->add(array(
           'template' => "{$templatePath}/CRM/Wordmailmerge/customFields.tpl"
@@ -235,6 +294,7 @@ function wordmailmerge_civicrm_buildForm( $formName, &$form ){
     }
 
 }
+
 
 function wordmailmerge_civicrm_post( $op, $objectName, $objectId, &$objectRef ){
   if( $objectName == 'MessageTemplate'){
@@ -343,24 +403,34 @@ function wordmailmerge_civicrm_postprocess($formName, &$form) {
       CRM_Core_Error::debug_var('message templateId not received ', $form);
       return;
     }
+
     $templateId = $form->getVar('_id');
+    //get the mail merge option
+    $mailMergeOptionId = '';
 
     // process 'New Message template'
     if ( $form->getAction() == CRM_Core_Action::ADD ) {
 
       // if 'is_wordmailmerge' checkbox is checked, insert uploaded document into wordmailmerge table
-      if ( isset($form->_submitValues['is_wordmailmerge']) && $form->_submitValues['is_wordmailmerge'] ) {
+      if ( isset($form->_submitValues['is_mail_merge']) && $form->_submitValues['is_mail_merge'] ) {
+
+        foreach($form->_submitValues as $key => $value){
+          if($key == 'is_mail_merge'){
+            $mailMergeOptionId = $value;          
+          }
+        }
 
         // get attached fileId
         $attachedFileId = CRM_Wordmailmerge_Utils::getAttachedFileId($templateId);
 
         // Link uploaded document into wordmailmerge table
         if (!empty($attachedFileId)) {
-          $sql = "INSERT INTO veda_civicrm_wordmailmerge ( msg_template_id, file_id )
-                  VALUES ( %1, %2 )";
+          $sql = "INSERT INTO veda_civicrm_wordmailmerge ( msg_template_id, file_id, mailmerge_option_id )
+                  VALUES ( %1, %2 , %3)";
           $params = array(
             1 => array($templateId , 'Integer'),
-            2 => array($attachedFileId, 'Integer')
+            2 => array($attachedFileId, 'Integer'),
+            3 => array($mailMergeOptionId, 'Integer')
           );
           $dao = CRM_Core_DAO::executeQuery($sql, $params);
         }
@@ -378,8 +448,8 @@ function wordmailmerge_civicrm_postprocess($formName, &$form) {
       // get attached fileId
       $attachedFileId = CRM_Wordmailmerge_Utils::getAttachedFileId($templateId);
 
-      // if already a wordmailmerge template and is_wordmailmerge is checked
-      if ( $isWordmailmergeTemplate && isset($form->_submitValues['is_wordmailmerge']) && $form->_submitValues['is_wordmailmerge'] ) {
+      // if already a wordmailmerge template and is_wordmailmerge is selected
+      if ( $isWordmailmergeTemplate && isset($form->_submitValues['is_mail_merge']) && $form->_submitValues['is_mail_merge'] ) {
 
         // Possibility of file has been updated, so update wordmailmerge table with the file Id
         if (!empty($attachedFileId)) {
@@ -393,15 +463,23 @@ function wordmailmerge_civicrm_postprocess($formName, &$form) {
 
       }
       // if not a wordmailmerge template and now marked as is_wordmailmerge
-      elseif ( !$isWordmailmergeTemplate && isset($form->_submitValues['is_wordmailmerge']) && $form->_submitValues['is_wordmailmerge']) {
+      elseif ( !$isWordmailmergeTemplate && isset($form->_submitValues['is_mail_merge'])) {
+
+
+        foreach($form->_submitValues as $key => $value){
+          if($key == 'is_mail_merge'){
+            $mailMergeOptionId = $value;          
+          }
+        }
 
         // Link uploaded document into wordmailmerge table
         if (!empty($attachedFileId)) {
-          $sql = "INSERT INTO veda_civicrm_wordmailmerge ( msg_template_id, file_id )
-                  VALUES ( %1, %2 )";
+          $sql = "INSERT INTO veda_civicrm_wordmailmerge ( msg_template_id, file_id, mailmerge_option_id )
+                  VALUES ( %1, %2, %3 )";
           $params = array(
             1 => array($templateId , 'Integer'),
-            2 => array($attachedFileId, 'Integer')
+            2 => array($attachedFileId, 'Integer'),
+            3 => array($mailMergeOptionId, 'Integer')
           );
           $dao = CRM_Core_DAO::executeQuery($sql, $params);
         }
