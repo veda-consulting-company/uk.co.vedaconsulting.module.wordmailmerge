@@ -32,6 +32,7 @@ class CRM_Wordmailmerge_Form_LibreOfficeMailMergeForm extends  CRM_Contact_Form_
     foreach ($tokenMerge as $tmKey => $tmValue) {
       $tokenFullName =  str_replace(array('{','}'),"",$tmValue['id']);
       $explodedTokenName =  explode('.', $tokenFullName);
+
       $tokenMerge[$tmKey]['token_name'] =  ($explodedTokenName[0] != 'contact') ? $tokenFullName : $explodedTokenName[1];
       if ($explodedTokenName[0] != 'civiqrcode'){
         if ($explodedTokenName[0] != 'contact') {
@@ -196,6 +197,7 @@ class CRM_Wordmailmerge_Form_LibreOfficeMailMergeForm extends  CRM_Contact_Form_
           $default['fullPath']      = $config->customFileUploadDir . DIRECTORY_SEPARATOR . $dao->uri;
           $default['deleteURLArgs'] = CRM_Core_BAO_File::deleteURLArgs('civicrm_file', $msg_id, $dao->id);
         }
+      
       $defaults[$dao->id] = $default;
       $this->assign('defaults', $defaults);
       $noofContact = count($this->_contactIds);
@@ -296,7 +298,7 @@ class CRM_Wordmailmerge_Form_LibreOfficeMailMergeForm extends  CRM_Contact_Form_
         }
       }
 
-      $output_file_name = 'CiviCRMWordExport.odt';
+      $output_file_name = 'CiviCRMLOWriterExport.odt';
       $TBS->Show(OPENTBS_DOWNLOAD, $output_file_name);
       // GK - record wordmailmerge as activity
       $recordActivity = CRM_Wordmailmerge_Utils::recordActivity($values);
