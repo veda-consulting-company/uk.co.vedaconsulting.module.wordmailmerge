@@ -40,6 +40,17 @@ function wordmailmerge_civicrm_install() {
         ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
     ");
 
+    CRM_Core_DAO::executeQuery("
+        CREATE TABLE IF NOT EXISTS `veda_civicrm_excelmailmerge` (
+          `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+          `template_title` VARCHAR(255) NOT NULL,
+          `is_active` tinyint(4) DEFAULT '1',
+          `file_id` int(10) NOT NULL COMMENT 'FK to file_civicrm',
+          `mailmerge_option_id` int(10) NOT NULL,
+          PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
+    ");
+
     // import auto_install.xml file
     $extRoot = dirname( __FILE__ ) . DIRECTORY_SEPARATOR;
     $extXMLFile = $extRoot . DIRECTORY_SEPARATOR . 'xml/auto_install.xml';
@@ -47,6 +58,23 @@ function wordmailmerge_civicrm_install() {
     $import = new CRM_Utils_Migrate_Import( );
     $import->run( $extXMLFile );
 }
+
+/**
+ * Implementation of hook_civicrm_managed
+ *
+ * Add entries to the navigation menu, automatically removed on uninstall
+ */
+function wordmailmerge_civicrm_navigationMenu(&$menu) {
+  $mailMergeTemplate = [
+    'name' => 'Mail Merge',
+    'url' => 'civicrm/MailMergeTemplate',
+    'permission' => 'administer CiviCRM',
+    'operator' => NULL,
+    'separator' => NULL,
+  ];
+  _wordmailmerge_civix_insert_navigation_menu($menu, 'Administer/CiviContribute', $mailMergeTemplate);
+}
+
 
 /**
  * Implementation of hook_civicrm_uninstall
@@ -128,30 +156,48 @@ function wordmailmerge_civicrm_alterSettingsFolders(&$metaDataFolders = NULL) {
 require_once 'CRM/Contact/Task.php';
 
 function wordmailmerge_civicrm_searchTasks( $objectName, &$tasks ){
-  if ($objectName != 'contact' && $objectName != 'membership') {
-    return;
-  }
-
-  $taskExist = FALSE;
-  foreach ($tasks as $key => $value) {
-    if (($value['class'] == 'CRM_Wordmailmerge_Form_WordMailMergeForm') || ($value['class'] == 'CRM_Wordmailmerge_Form_LibreOfficeMailMergeForm')) {
-      $taskExist = TRUE;
+  if ($objectName == 'contact' || $objectName == 'membership') {
+    $taskExist = FALSE;
+    foreach ($tasks as $key => $value) {
+      if (($value['class'] == 'CRM_Wordmailmerge_Form_WordMailMergeForm') || ($value['class'] == 'CRM_Wordmailmerge_Form_LibreOfficeMailMergeForm')) {
+        $taskExist = TRUE;
+      }
     }
-  }
-
-  if (!$taskExist) {
-    $addArray = array(
-      'title' => ts('Word Mail Merge '),
-      'class' => 'CRM_Wordmailmerge_Form_WordMailMergeForm',
-      'result' => TRUE,
-    );
-    $addArray2 = array(
-      'title' => ts('Libreoffice Mail Merge '),
-      'class' => 'CRM_Wordmailmerge_Form_LibreOfficeMailMergeForm',
-      'result' => TRUE,
-    );
-    array_push($tasks, $addArray, $addArray2);
-  }
+  
+    if (!$taskExist) {
+      $addArray = array(
+        'title' => ts('Word Mail Merge '),
+        'class' => 'CRM_Wordmailmerge_Form_WordMailMergeForm',
+        'result' => TRUE,
+      );
+      $addArray2 = array(
+        'title' => ts('Libreoffice Mail Merge '),
+        'class' => 'CRM_Wordmailmerge_Form_LibreOfficeMailMergeForm',
+        'result' => TRUE,
+      );
+      array_push($tasks, $addArray, $addArray2);
+    }  
+  }elseif($objectName == 'contribution'){
+    $taskExist = FALSE;
+    foreach($tasks as $key => $value){
+      if(($value['class'] == 'CRM_Wordmailmerge_Form_LibreOfficeCalcMailMergeForm') || ($value['class'] == 'CRM_Wordmailmerge_Form_LibreOfficeMailMergeForm')){
+        $taskExist = TRUE;
+      }
+    }
+    if(!$taskExist){
+      $addArray = array (
+        'title' => ts('LibreOffice Calc Mail Merge'),
+        'class' => 'CRM_Wordmailmerge_Form_LibreOfficeCalcMailMergeForm',
+        'result' => TRUE
+      );
+      $addArray2 = array(
+        'title' => ts('Ms Excel Mail Merge '),
+        'class' => 'CRM_Wordmailmerge_Form_MsExcelMailMergeForm',
+        'result' => TRUE,
+      );
+      array_push($tasks, $addArray, $addArray2);
+    }
+  } 
 }
 
 function wordmailmerge_civicrm_buildForm( $formName, &$form ){
@@ -218,7 +264,7 @@ function wordmailmerge_civicrm_buildForm( $formName, &$form ){
           array(
             '0' => ts('- select -'),
             '1' => ts('Word template'),
-            '2' => ts('LibreOffice template')
+            '2' => ts('LibreOffice Writer template')
           ) 
         );
         
