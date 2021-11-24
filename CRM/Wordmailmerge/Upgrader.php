@@ -9,10 +9,20 @@ class CRM_Wordmailmerge_Upgrader extends CRM_Wordmailmerge_Upgrader_Base {
   // upgrade tasks. They are executed in order (like Drupal's hook_update_N).
 
   /**
-   * Example: Run an external SQL script when the module is installed.
-   *
+   * Installation.
+   */
   public function install() {
-    $this->executeSqlFile('sql/myinstall.sql');
+    // Create table to hold wordmailmerge template data.
+    CRM_Core_DAO::executeQuery("
+        CREATE TABLE IF NOT EXISTS `veda_civicrm_wordmailmerge` (
+          `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+          `msg_template_id` int(10) NOT NULL,
+          `file_id` int(10) NOT NULL COMMENT 'FK to file_civicrm',
+          PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
+    ");
+    // Custom Data (Activity Type).
+    $this->executeCustomDataFile('xml/auto_install.xml');
   }
 
   /**
@@ -35,9 +45,9 @@ class CRM_Wordmailmerge_Upgrader extends CRM_Wordmailmerge_Upgrader_Base {
 
   /**
    * Example: Run an external SQL script when the module is uninstalled.
-   *
+   */
   public function uninstall() {
-   $this->executeSqlFile('sql/myuninstall.sql');
+    CRM_Core_DAO::executeQuery("DROP TABLE IF EXISTS `veda_civicrm_wordmailmerge`");
   }
 
   /**
