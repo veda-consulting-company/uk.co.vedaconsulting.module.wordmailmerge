@@ -199,8 +199,8 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
       $defaults[$dao->id] = $default;
       $this->assign('defaults', $defaults);
       $noofContact = count($this->_contactIds);
-      require_once $config->extensionsDir.'/uk.co.vedaconsulting.module.wordmailmerge/tinybutstrong/tbs_class.php';
-      require_once $config->extensionsDir.'/uk.co.vedaconsulting.module.wordmailmerge/tinybutstrong-opentbs/tbs_plugin_opentbs.php';
+      require_once  'tinybutstrong/tbs_class.php';
+      require_once 'tinybutstrong-opentbs/tbs_plugin_opentbs.php';
       $TBS = new clsTinyButStrong; // new instance of TBS
       $TBS->Plugin(TBS_INSTALL, OPENTBS_PLUGIN); // load the OpenTBS plugin
       $template = $default['fullPath'];
@@ -289,7 +289,6 @@ class CRM_Wordmailmerge_Form_WordMailMergeForm extends CRM_Contact_Form_Task {
           /*if (!empty($vars[$key]['contact']['address_block'])) {
             $vars[$key]['contact']['address_block'] = str_replace('<br />', "", $vars[$key]['contact']['address_block']);
           }*/
-
           $TBS->LoadTemplate($template, OPENTBS_ALREADY_UTF8);
           $TBS->MergeBlock(self::TOKEN_VAR_NAME,$vars);
           }
