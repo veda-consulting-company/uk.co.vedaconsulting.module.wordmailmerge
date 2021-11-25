@@ -28,23 +28,7 @@ function wordmailmerge_civicrm_xmlMenu(&$files) {
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_install
  */
 function wordmailmerge_civicrm_install() {
-  require_once "CRM/Core/DAO.php";
-
-    CRM_Core_DAO::executeQuery("
-        CREATE TABLE IF NOT EXISTS `veda_civicrm_wordmailmerge` (
-          `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-          `msg_template_id` int(10) NOT NULL,
-          `file_id` int(10) NOT NULL COMMENT 'FK to file_civicrm',
-          PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
-    ");
-
-    // import auto_install.xml file
-    $extRoot = dirname( __FILE__ ) . DIRECTORY_SEPARATOR;
-    $extXMLFile = $extRoot . DIRECTORY_SEPARATOR . 'xml/auto_install.xml';
-    require_once 'CRM/Utils/Migrate/Import.php';
-    $import = new CRM_Utils_Migrate_Import( );
-    $import->run( $extXMLFile );
+  _wordmailmerge_civix_civicrm_install();
 }
 
 /**
